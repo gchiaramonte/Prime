@@ -14,13 +14,13 @@
         <releaseNotes>First release on NuGet.</releaseNotes>
         <copyright>Copyright (c) 2016 Bryan Edds</copyright>
         <language>en-US</language>
-        <tags>F#, Functional, Functional Programming</tags>
+        <tags>F# Functional Programming</tags>
         <dependencies>
             <dependency id="xunit" version="1.9.2" />
             <dependency id="FParsec" version="1.0.1" />
         </dependencies>
         <frameworkAssemblies>
-            <frameworkAssembly assemblyName="FSharp.Core" targetFramework=".NETFramework4.4.0.0" />
+            <frameworkAssembly assemblyName="System.Xml" targetFramework=".NETFramework4.0.0.0" />
         </frameworkAssemblies>
     </metadata>
     <files>
