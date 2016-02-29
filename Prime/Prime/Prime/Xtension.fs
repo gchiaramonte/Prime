@@ -107,8 +107,8 @@ module Xtension =
     /// Get a field from an xtension.
     let getField name xtension = Vmap.find name xtension.Fields
 
-    /// Get an Xtension's fields.
-    let getFields xtension = xtension.Fields
+    /// Try to get a field from an xtension.
+    let tryGetField name xtension = Vmap.tryFind name xtension.Fields
 
     /// Attach a field to an Xtension.
     let attachField name field xtension = { xtension with Fields = Vmap.add name field xtension.Fields }
@@ -121,3 +121,9 @@ module Xtension =
 
     /// Detach multiple fields from an Xtension.
     let detachFields names xtension = { xtension with Fields = Vmap.removeMany names xtension.Fields }
+
+    /// Convert an xtension to a sequence of its entries.
+    let toSeq xtension = xtension.Fields :> _ seq
+
+    /// Convert an xtension to a sequence of its entries.
+    let ofSeq seq = attachFields seq empty
