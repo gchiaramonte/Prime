@@ -174,11 +174,11 @@ module Address =
         { Names = []; HashCode = 0; TypeCarrier = fun (_ : 'a) -> () }
 
     /// Make an address from names.
-    let makeFromNames<'a> names =
+    let makeFromNames<'a> names : 'a Address =
         Address.ltoa<'a> names
 
     /// Make an address from a '/' delimited string.
-    let makeFromFullName<'a> fullName =
+    let makeFromFullName<'a> fullName : 'a Address =
         Address.makeFromFullName<'a> fullName
 
     /// Get the names of an address.
