@@ -3,17 +3,17 @@
 
 namespace Prime
 
-/// Presents a purely-functional interface to a mutable object / record / whatever.
-/// If it is not satisfactorily efficient to run a clone operation on the mutant for every get,
-/// just pass in the id function for make's cloneMutant arg, but make sure to NEVER mutate the
-/// returned mutant!
-type [<ReferenceEquality>] 'm MutantCache =
-    private
-        { CloneMutant : 'm -> 'm
-          mutable OptValidMutant : 'm option }
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module MutantCache =
+
+    /// Presents a purely-functional interface to a mutable object / record / whatever.
+    /// If it is not satisfactorily efficient to run a clone operation on the mutant for every get,
+    /// just pass in the id function for make's cloneMutant arg, but make sure to NEVER mutate the
+    /// returned mutant!
+    type [<ReferenceEquality>] 'm MutantCache =
+        private
+            { CloneMutant : 'm -> 'm
+              mutable OptValidMutant : 'm option }
 
     let mutable private GlobalMutantRebuilds = 0L
 
@@ -62,3 +62,9 @@ module MutantCache =
     let make cloneMutant (mutant : 'm) =
         { CloneMutant = cloneMutant
           OptValidMutant = Some mutant }
+          
+/// Presents a purely-functional interface to a mutable object / record / whatever.
+/// If it is not satisfactorily efficient to run a clone operation on the mutant for every get,
+/// just pass in the id function for make's cloneMutant arg, but make sure to NEVER mutate the
+/// returned mutant!
+type 'm MutantCache = 'm MutantCache.MutantCache

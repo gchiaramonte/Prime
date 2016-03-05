@@ -19,18 +19,18 @@ type internal Hkv<'k, 'v when 'k : comparison> =
         val V : 'v
         end
 
-/// TODO: there's an F# issue where UseNullAsTrueValue does not work on unions with 4 or more cases
-/// https://github.com/Microsoft/visualfsharp/issues/711 . Once resolved, should use it and be able
-/// to make arrays with Array.zeroCreate alone without also copying over the empty array.
-type internal Vnode<'k, 'v when 'k : comparison> =
-    private
-        | Nil
-        | Singleton of Hkv<'k, 'v>
-        | Multiple of Vnode<'k, 'v> array
-        | Clash of Map<'k, 'v>
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module internal Vnode =
+
+    /// TODO: there's an F# issue where UseNullAsTrueValue does not work on unions with 4 or more cases
+    /// https://github.com/Microsoft/visualfsharp/issues/711 . Once resolved, should use it and be able
+    /// to make arrays with Array.zeroCreate alone without also copying over the empty array.
+    type internal Vnode<'k, 'v when 'k : comparison> =
+        private
+            | Nil
+            | Singleton of Hkv<'k, 'v>
+            | Multiple of Vnode<'k, 'v> array
+            | Clash of Map<'k, 'v>
 
     /// OPTIMIZATION: Array.Clone () is not used since it's been profiled to be slower
     let inline cloneArray (arr : Vnode<'k, 'v> array) : Vnode<'k, 'v> array =
@@ -151,21 +151,21 @@ module internal Vnode =
     let empty =
         Nil
 
-/// A very fast persistent hash map.
-/// Works in effectively constant-time for look-ups and updates.
-type [<NoEquality; NoComparison>] Vmap<'k, 'v when 'k : comparison> =
-    private
-        { Node : Vnode<'k, 'v>
-          EmptyArray : Vnode<'k, 'v> array }
-
-    interface IEnumerable<'k * 'v> with
-        member this.GetEnumerator () = (Vnode.toSeq this.Node).GetEnumerator ()
-
-    interface IEnumerable with
-        member this.GetEnumerator () = (Vnode.toSeq this.Node).GetEnumerator () :> IEnumerator
-
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Vmap =
+
+    /// A very fast persistent hash map.
+    /// Works in effectively constant-time for look-ups and updates.
+    type [<NoEquality; NoComparison>] Vmap<'k, 'v when 'k : comparison> =
+        private
+            { Node : Vnode.Vnode<'k, 'v>
+              EmptyArray : Vnode.Vnode<'k, 'v> array }
+    
+        interface IEnumerable<'k * 'v> with
+            member this.GetEnumerator () = (Vnode.toSeq this.Node).GetEnumerator ()
+    
+        interface IEnumerable with
+            member this.GetEnumerator () = (Vnode.toSeq this.Node).GetEnumerator () :> IEnumerator
 
     /// Create an empty Vmap.
     let makeEmpty () =
@@ -246,3 +246,7 @@ module Vmap =
             (fun map (k, v) -> add k v map)
             (makeEmpty ())
             kvps
+
+/// A very fast persistent hash map.
+/// Works in effectively constant-time for look-ups and updates.
+type Vmap<'k, 'v when 'k : comparison> = Vmap.Vmap<'k, 'v>

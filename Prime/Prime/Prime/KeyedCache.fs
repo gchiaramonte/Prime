@@ -4,17 +4,17 @@
 namespace Prime
 open Prime
 
-/// Presents a purely-functional interface to a cached value.
-/// Works by associating a cached value with a given cache key such that the cached value remains valid when queried
-/// for using the same cache key (as decided by a simple key comparer function), automatically rebuilding the cached
-/// value and key (as done with a simple factory function).
-type [<ReferenceEquality>] KeyedCache<'k, 'v when 'k : equality> =
-    private
-        { mutable CacheKey : 'k
-          mutable CacheValue : 'v }
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module KeyedCache =
+
+    /// Presents a purely-functional interface to a cached value.
+    /// Works by associating a cached value with a given cache key such that the cached value remains valid when queried
+    /// for using the same cache key (as decided by a simple key comparer function), automatically rebuilding the cached
+    /// value and key (as done with a simple factory function).
+    type [<ReferenceEquality>] KeyedCache<'k, 'v when 'k : equality> =
+        private
+            { mutable CacheKey : 'k
+              mutable CacheValue : 'v }
 
     let mutable private GlobalCacheHits = 0L
     let mutable private GlobalCacheMisses = 0L
@@ -53,3 +53,9 @@ module KeyedCache =
     let make (cacheKey : 'k) (cacheValue : 'v) =
         { CacheKey = cacheKey
           CacheValue = cacheValue }
+
+/// Presents a purely-functional interface to a cached value.
+/// Works by associating a cached value with a given cache key such that the cached value remains valid when queried
+/// for using the same cache key (as decided by a simple key comparer function), automatically rebuilding the cached
+/// value and key (as done with a simple factory function).
+type KeyedCache<'k, 'v when 'k : equality> = KeyedCache.KeyedCache<'k, 'v>

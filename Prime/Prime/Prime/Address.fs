@@ -51,67 +51,122 @@ type AddressConverter (targetType : Type) =
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid AddressConverter conversion from source."
 
-/// Specifies the address of an identifiable value.
-type [<CustomEquality; CustomComparison; TypeConverter (typeof<AddressConverter>)>] 'a Address =
-    private
-        { Names : Name list
-          HashCode : int // OPTIMIZATION: hash cached for speed
-          TypeCarrier : 'a -> unit }
-
-    static member internal join (names : Name seq) =
-        Name.join "/" names
-
-    static member internal split (name : Name) =
-        Name.split [|'/'|] name
-
-    static member internal getFullName (address : 'a Address) =
-        Address<'a>.join address.Names
-
-    /// Make an address from a '/' delimited string.
-    /// NOTE: do not move this function as the AddressConverter's reflection code relies on it being exactly here!
-    static member makeFromFullName fullName =
-        let names = Address<'a>.split fullName |> List.ofSeq
-        { Names = names; HashCode = Name.hashNames names; TypeCarrier = fun (_ : 'a) -> () }
-
-    /// Hash an Address.
-    static member hash (address : 'a Address) =
-        address.HashCode
-            
-    /// Equate Addresses.
-    static member equals address address2 =
-        Name.equateNames address.Names address2.Names
-
-    /// Compare Addresses.
-    static member compare address address2 =
-        Name.compareNames address.Names address2.Names
-
-    interface 'a Address IComparable with
-        member this.CompareTo that =
-            Address<'a>.compare this that
-
-    interface IComparable with
-        member this.CompareTo that =
-            match that with
-            | :? ('a Address) as that -> Address<'a>.compare this that
-            | _ -> failwith "Invalid Address comparison (comparee not of type Address)."
-
-    interface 'a Address IEquatable with
-        member this.Equals that =
-            Address<'a>.equals this that
-
-    override this.Equals that =
-        match that with
-        | :? ('a Address) as that -> Address<'a>.equals this that
-        | _ -> false
-
-    override this.GetHashCode () =
-        Address<'a>.hash this
-    
-    override this.ToString () =
-        Address<'a>.getFullName this |> Name.getNameStr
-
 [<RequireQualifiedAccess>]
 module Address =
+
+    /// Specifies the address of an identifiable value.
+    type [<CustomEquality; CustomComparison; TypeConverter (typeof<AddressConverter>)>] 'a Address =
+        private
+            { Names : Name list
+              HashCode : int // OPTIMIZATION: hash cached for speed
+              TypeCarrier : 'a -> unit }
+    
+        static member internal join (names : Name seq) =
+            Name.join "/" names
+    
+        static member internal split (name : Name) =
+            Name.split [|'/'|] name
+    
+        static member internal getFullName (address : 'a Address) =
+            Address<'a>.join address.Names
+    
+        /// Make an address from a '/' delimited string.
+        /// NOTE: do not move this function as the AddressConverter's reflection code relies on it being exactly here!
+        static member makeFromFullName<'a> fullName =
+            let names = Address<'a>.split fullName |> List.ofSeq
+            { Names = names; HashCode = Name.hashNames names; TypeCarrier = fun (_ : 'a) -> () }
+    
+        /// Hash an Address.
+        static member hash (address : 'a Address) =
+            address.HashCode
+                
+        /// Equate Addresses.
+        static member equals address address2 =
+            Name.equateNames address.Names address2.Names
+    
+        /// Compare Addresses.
+        static member compare address address2 =
+            Name.compareNames address.Names address2.Names
+
+        /// Convert an address of type 'a to an address of type 'b.
+        static member atoa<'a, 'b> (address : 'a Address) =
+            { Names = address.Names; HashCode = address.HashCode; TypeCarrier = fun (_ : 'b) -> () }
+
+        /// Convert a names list into an address.
+        static member ltoa<'a> (names : _ list) =
+            { Names = names |> List.ofSeq; HashCode = Name.hashNames names; TypeCarrier = fun (_ : 'a) -> () }
+
+        /// Convert a full name into an address.
+        static member ftoa<'a> fullName : 'a Address =
+            Address.makeFromFullName<'a> fullName
+
+        /// Convert a single name into an address.
+        static member ntoa<'a> name : 'a Address =
+            Address.ltoa<'a> [name]
+
+        /// Convert any address to an obj Address.
+        static member atooa<'a> (address : 'a Address) =
+            { Names = address.Names; HashCode = address.HashCode; TypeCarrier = fun (_ : obj) -> () }
+
+        /// Concatenate two addresses of the same type.
+        static member acat<'a> (address : 'a Address) (address2 : 'a Address) : 'a Address=
+            Address.ltoa<'a> (address.Names @ address2.Names)
+
+        /// Concatenate two addresses, taking the type of first address.
+        static member acatf<'a> (address : 'a Address) (address2 : obj Address) : 'a Address =
+            Address.ltoa<'a> (address.Names @ address2.Names)
+    
+        /// Concatenate two addresses, forcing the type of first address.
+        static member acatff<'a, 'b> (address : 'a Address) (address2 : 'b Address) : 'a Address =
+            Address.acatf address ^ Address.atooa address2
+
+        /// Concatenate two addresses, taking the type of the second address.
+        static member acats<'a> (address : obj Address) (address2 : 'a Address) : 'a Address =
+            Address.ltoa<'a> (address.Names @ address2.Names)
+    
+        /// Concatenate two addresses, forcing the type of second address.
+        static member acatsf<'a, 'b> (address : 'a Address) (address2 : 'b Address) : 'b Address  =
+            Address.acats (Address.atooa address) address2
+
+        /// Concatenate two addresses of the same type.
+        static member (-|-) (address : 'a Address, address2 : 'a Address) = Address.acat address address2
+
+        /// Concatenate two addresses, taking the type of first address.
+        static member (->-) (address : 'a Address, address2 : obj Address) = Address.acatf address address2
+
+        /// Concatenate two addresses, forcing the type of first address.
+        static member (->>-) (address : 'a Address, address2 : 'b Address) = Address.acatff address address2
+
+        /// Concatenate two addresses, taking the type of the second address.
+        static member (-<-) (address : obj Address, address2 : 'b Address) = Address.acats address address2
+
+        /// Concatenate two addresses, forcing the type of second address.
+        static member (-<<-) (address : 'a Address, address2 : 'b Address) = Address.acatsf address address2
+
+        interface 'a Address IComparable with
+            member this.CompareTo that =
+                Address<'a>.compare this that
+    
+        interface IComparable with
+            member this.CompareTo that =
+                match that with
+                | :? ('a Address) as that -> Address<'a>.compare this that
+                | _ -> failwith "Invalid Address comparison (comparee not of type Address)."
+    
+        interface 'a Address IEquatable with
+            member this.Equals that =
+                Address<'a>.equals this that
+    
+        override this.Equals that =
+            match that with
+            | :? ('a Address) as that -> Address<'a>.equals this that
+            | _ -> false
+    
+        override this.GetHashCode () =
+            Address<'a>.hash this
+        
+        override this.ToString () =
+            Address<'a>.getFullName this |> Name.getNameStr
 
     /// The empty address.
     let empty<'a> =
@@ -119,7 +174,7 @@ module Address =
 
     /// Make an address from names.
     let makeFromNames<'a> names =
-        { Names = names |> List.ofSeq; HashCode = Name.hashNames names; TypeCarrier = fun (_ : 'a) -> () }
+        Address.ltoa<'a> names
 
     /// Make an address from a '/' delimited string.
     let makeFromFullName<'a> fullName =
@@ -131,7 +186,7 @@ module Address =
 
     /// Change the type of an address.
     let changeType<'a, 'b> (address : 'a Address) =
-        { Names = address.Names; HashCode = address.HashCode; TypeCarrier = fun (_ : 'b) -> () }
+        Address.atoa<'a, 'b> address
 
     /// Get the full name of an address.
     let getFullName address =
@@ -181,63 +236,38 @@ module Address =
     let isEmpty address =
         List.isEmpty address.Names
 
+/// Specifies the address of an identifiable value.
+type 'a Address = 'a Address.Address
+
 [<AutoOpen>]
 module AddressOperators =
 
     /// Convert an address of type 'a to an address of type 'b.
-    let atoa<'a, 'b> address =
-        Address.changeType<'a, 'b> address
+    let inline atoa<'a, 'b> (address : 'a Address) = Address.atoa<'a, 'b> address
 
     /// Convert a names list into an address.
-    let ltoa<'a> (namesList : _ list) =
-        Address.makeFromNames<'a> namesList
+    let inline ltoa<'a> names : 'a Address  = Address.ltoa<'a> names
 
     /// Convert a full name into an address.
-    let ftoa<'a> fullName =
-        Address.makeFromFullName<'a> fullName
+    let inline ftoa<'a> fullName : 'a Address = Address.ftoa<'a> fullName
 
     /// Convert a single name into an address.
-    let ntoa<'a> name =
-        ltoa<'a> [name]
+    let inline ntoa<'a> name : 'a Address  = Address.ntoa<'a> name
 
     /// Convert any address to an obj Address.
-    let atooa<'a> (address : 'a Address) =
-        { Names = address.Names; HashCode = address.HashCode; TypeCarrier = fun (_ : obj) -> () }
+    let inline atooa<'a> (address : 'a Address) = Address.atooa<'a> address
 
     /// Concatenate two addresses of the same type.
-    let acat<'a> (address : 'a Address) (address2 : 'a Address) =
-        ltoa<'a> (address.Names @ address2.Names)
+    let inline acat<'a> (address : 'a Address) (address2 : 'a Address) = Address.acat<'a> address address2
 
     /// Concatenate two addresses, taking the type of first address.
-    let acatf<'a> (address : 'a Address) (address2 : obj Address) =
-        ltoa<'a> (address.Names @ address2.Names)
+    let inline acatf<'a> (address : 'a Address) (address2 : obj Address) = Address.acatf<'a> address address2
     
     /// Concatenate two addresses, forcing the type of first address.
-    let acatff<'a, 'b> (address : 'a Address) (address2 : 'b Address) =
-        acatf address ^ atooa address2
+    let inline acatff<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatff<'a, 'b> address address2
 
     /// Concatenate two addresses, taking the type of the second address.
-    let acats<'a> (address : obj Address) (address2 : 'a Address) =
-        ltoa<'a> (address.Names @ address2.Names)
+    let inline acats<'a> (address : obj Address) (address2 : 'a Address) = Address.acats<'a> address address2
     
     /// Concatenate two addresses, forcing the type of second address.
-    let acatsf<'a, 'b> (address : 'a Address) (address2 : 'b Address) =
-        acats (atooa address) address2
-
-/// Implement operators as static members.
-type Address with
-
-    /// Concatenate two addresses of the same type.
-    static member (-|-) (address, address2) = acat address address2
-
-    /// Concatenate two addresses, taking the type of first address.
-    static member (->-) (address, address2) = acatf address address2
-
-    /// Concatenate two addresses, forcing the type of first address.
-    static member (->>-) (address, address2) = acatff address address2
-
-    /// Concatenate two addresses, taking the type of the second address.
-    static member (-<-) (address, address2) = acats address address2
-
-    /// Concatenate two addresses, forcing the type of second address.
-    static member (-<<-) (address, address2) = acatsf address address2
+    let inline acatsf<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatsf<'a, 'b> address address2

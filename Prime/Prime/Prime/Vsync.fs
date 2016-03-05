@@ -8,13 +8,6 @@ open System.Threading
 open System.Threading.Tasks
 open Prime
 
-/// The 'Vsync' (AKA, 'Variable Synchrony') monad.
-/// NOTE: to reference how all this stuff works in F#, see here - https://msdn.microsoft.com/en-us/library/dd233182.aspx
-type [<ReferenceEquality>] 'a Vsync =
-    private
-        | Sync of (unit -> 'a)
-        | Async of 'a Async
-
 /// Async is missing a couple of functions, as we know...
 module Async =
 
@@ -24,8 +17,15 @@ module Async =
             { let! b = a
               return f b }
 
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module Vsync =
+
+    /// The 'Vsync' (AKA, 'Variable Synchrony') monad.
+    /// NOTE: to reference how all this stuff works in F#, see here - https://msdn.microsoft.com/en-us/library/dd233182.aspx
+    type [<ReferenceEquality>] 'a Vsync =
+        private
+            | Sync of (unit -> 'a)
+            | Async of 'a Async
 
     /// Configures whether to use synchronized processing.
     let mutable private OptSync = None
@@ -200,6 +200,10 @@ module Vsync =
         if isSync ()
         then Sync ^ fun () -> ignore ^ Array.ofSeq ^ Seq.map (function Sync a -> a () | Async _ -> failwithumf ()) s
         else Async ^ Async.ParallelIgnore i ^ Seq.map Extract s*)
+
+/// The 'Vsync' (AKA, 'Variable Synchrony') monad.
+/// NOTE: to reference how all this stuff works in F#, see here - https://msdn.microsoft.com/en-us/library/dd233182.aspx
+type 'a Vsync = 'a Vsync.Vsync
 
 /// The Vsync computation expression builder.
 type [<Sealed>] VsyncBuilder () =

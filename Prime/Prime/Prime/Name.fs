@@ -47,53 +47,53 @@ type NameConverter (targetType : Type) =
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid NameConverter conversion from source."
 
-/// A name for optimized keying in hashing containers.
-type [<CustomEquality; CustomComparison; TypeConverter (typeof<NameConverter>)>] Name =
-    private
-        { NameStr : string
-          HashCode : int } // OPTIMIZATION: hash cached for speed
-
-    /// Make a name from a non-empty string without whitespace.
-    static member make (nameStr : string) =
-        match nameStr with
-        | _ when nameStr.IndexOfAny [|'\n'; '\r'; '\t'; ' '|] <> -1 -> failwith "Invalid name; must have no whitespace characters."
-        | _ -> { NameStr = nameStr; HashCode = nameStr.GetHashCode () }
-
-    /// Equate Names.
-    static member equals name name2 =
-        strEq name.NameStr name2.NameStr
-
-    /// Compare Names.
-    static member compare name name2 =
-        strCmp name.NameStr name2.NameStr
-
-    interface Name IComparable with
-        member this.CompareTo that =
-            Name.compare this that
-
-    interface IComparable with
-        member this.CompareTo that =
-            match that with
-            | :? Name as that -> Name.compare this that
-            | _ -> failwith "Invalid Name comparison (comparee not of type Name)."
-
-    interface Name IEquatable with
-        member this.Equals that =
-            Name.equals this that
-
-    override this.Equals that =
-        match that with
-        | :? Name as that -> Name.equals this that
-        | _ -> false
-
-    override this.GetHashCode () =
-        this.HashCode
-
-    override this.ToString () =
-        this.NameStr
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module Name =
+
+    /// A name for optimized keying in hashing containers.
+    type [<CustomEquality; CustomComparison; TypeConverter (typeof<NameConverter>)>] Name =
+        private
+            { NameStr : string
+              HashCode : int } // OPTIMIZATION: hash cached for speed
+    
+        /// Make a name from a non-empty string without whitespace.
+        static member make (nameStr : string) =
+            match nameStr with
+            | _ when nameStr.IndexOfAny [|'\n'; '\r'; '\t'; ' '|] <> -1 -> failwith "Invalid name; must have no whitespace characters."
+            | _ -> { NameStr = nameStr; HashCode = nameStr.GetHashCode () }
+    
+        /// Equate Names.
+        static member equals name name2 =
+            strEq name.NameStr name2.NameStr
+    
+        /// Compare Names.
+        static member compare name name2 =
+            strCmp name.NameStr name2.NameStr
+    
+        interface Name IComparable with
+            member this.CompareTo that =
+                Name.compare this that
+    
+        interface IComparable with
+            member this.CompareTo that =
+                match that with
+                | :? Name as that -> Name.compare this that
+                | _ -> failwith "Invalid Name comparison (comparee not of type Name)."
+    
+        interface Name IEquatable with
+            member this.Equals that =
+                Name.equals this that
+    
+        override this.Equals that =
+            match that with
+            | :? Name as that -> Name.equals this that
+            | _ -> false
+    
+        override this.GetHashCode () =
+            this.HashCode
+    
+        override this.ToString () =
+            this.NameStr
 
     /// Get the name of a name key.
     let getNameStr name =
@@ -143,6 +143,12 @@ module Name =
     /// The empty name, consisting of an empty string.
     let empty =
         Name.make String.Empty
+
+[<AutoOpen>]
+module NameModule =
+
+    /// A name for optimized keying in hashing containers.
+    type Name = Name.Name
 
 [<AutoOpen>]
 module NameOperators =

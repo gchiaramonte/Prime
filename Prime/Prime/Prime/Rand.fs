@@ -4,13 +4,13 @@
 namespace Prime
 open System
 
-/// An immutable random number generator using the xorshift* algorithm.
-type [<StructuralEquality; NoComparison>] Rand =
-    private
-        { RandState : uint64 }
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
 module Rand =
+
+    /// An immutable random number generator using the xorshift* algorithm.
+    type [<StructuralEquality; NoComparison>] Rand =
+        private
+            { RandState : uint64 }
 
     /// Get the sample value used to generate the current random value.
     let private sample rand =
@@ -97,3 +97,9 @@ module Rand =
     /// Make a rand value generator from the default seed state.
     let make () =
         makeFromSeedState DefaultSeedState
+
+[<AutoOpen>]
+module RandModule =
+
+    /// An immutable random number generator using the xorshift* algorithm.
+    type Rand = Rand.Rand
