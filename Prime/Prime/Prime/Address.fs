@@ -39,7 +39,8 @@ type AddressConverter (targetType : Type) =
         | :? string as addressStr ->
             let fullName = Name.make addressStr
             let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
-            ftoaFunction.Invoke (null, [|fullName|])
+            let ftoaFunctionGeneric = ftoaFunction.MakeGenericMethod ((targetType.GetGenericArguments ()).[0])
+            ftoaFunctionGeneric.Invoke (null, [|fullName|])
         | :? Symbol as addressSymbol ->
             match addressSymbol with
             | Atom addressStr ->
@@ -178,7 +179,7 @@ module Address =
 
     /// Make an address from a '/' delimited string.
     let makeFromFullName<'a> fullName =
-        Address<'a>.makeFromFullName fullName
+        Address.makeFromFullName<'a> fullName
 
     /// Get the names of an address.
     let getNames address =
@@ -190,7 +191,7 @@ module Address =
 
     /// Get the full name of an address.
     let getFullName address =
-        Address<'a>.getFullName address
+        Address.getFullName address
 
     /// Get the name of an address.
     let getName address =
@@ -198,7 +199,7 @@ module Address =
 
     /// Get the address's hash code.
     let getHashCode address =
-        Address<'a>.hash address
+        Address.hash address
 
     /// Take the head of an address.
     let head address =
