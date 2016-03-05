@@ -1,4 +1,4 @@
-The Prime F# Code Library [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bryanedds/Prime/blob/master/LICENSE.md) 
+The Prime F# Code Library [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bryanedds/Prime/blob/master/LICENSE.md) [![NuGet](https://img.shields.io/nuget/v/Nuget.Core.svg)](https://www.nuget.org/packages/Prime)
 =
 
 ## Features
