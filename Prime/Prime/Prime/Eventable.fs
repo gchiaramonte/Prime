@@ -6,51 +6,17 @@ open System
 open System.Collections.Generic
 open Prime
 
+/// Adds the capability to use purely-functional events with the given type 'w.
+type Eventable<'w when 'w :> 'w Eventable> =
+    interface
+        abstract member GetLiveness : unit -> Liveness
+        abstract member GetEventSystem : unit -> 'w EventSystem
+        abstract member UpdateEventSystem : ('w EventSystem -> 'w EventSystem) -> 'w
+        abstract member ContainsParticipant : Participant -> bool
+        abstract member PublishEvent<'a, 'p when 'p :> Participant> : Participant -> 'p -> 'a -> 'a Address -> string list -> obj -> 'w -> Handling * 'w
+        end
+
 [<RequireQualifiedAccess>]
-module Events =
-
-    /// Represents any event.
-    let Any = ntoa<obj> !!"*"
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-module EventSystem =
-
-    /// Add event state.
-    let addEventState<'a, 'w when 'w :> 'w Eventable> key (state : 'a) (eventSystem : 'w EventSystem) =
-        { eventSystem with EventStates = Vmap.add key (state :> obj) eventSystem.EventStates }
-
-    /// Remove event state.
-    let removeEventState<'w when 'w :> 'w Eventable> key (eventSystem : 'w EventSystem) =
-        { eventSystem with EventStates = Vmap.remove key eventSystem.EventStates }
-
-    /// Get subscriptions.
-    let getSubscriptions<'w when 'w :> 'w Eventable> (eventSystem : 'w EventSystem) =
-        eventSystem.Subscriptions
-
-    /// Get unsubscriptions.
-    let getUnsubscriptions<'w when 'w :> 'w Eventable> (eventSystem : 'w EventSystem) =
-        eventSystem.Unsubscriptions
-
-    /// Set subscriptions.
-    let internal setSubscriptions<'w when 'w :> 'w Eventable> subscriptions (eventSystem : 'w EventSystem) =
-        { eventSystem with Subscriptions = subscriptions }
-
-    /// Set unsubscriptions.
-    let internal setUnsubscriptions<'w when 'w :> 'w Eventable> unsubscriptions (eventSystem : 'w EventSystem) =
-        { eventSystem with Unsubscriptions = unsubscriptions }
-
-    /// Get event state.
-    let getEventState<'a, 'w when 'w :> 'w Eventable> key (eventSystem : 'w EventSystem) =
-        let state = Vmap.find key eventSystem.EventStates
-        state :?> 'a
-
-    /// Make an event system.
-    let make () =
-        { Subscriptions = Vmap.makeEmpty ()
-          Unsubscriptions = Vmap.makeEmpty ()
-          EventStates = Vmap.makeEmpty () }
-
-[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Eventable =
 
     let private AnyEventAddressesCache =
