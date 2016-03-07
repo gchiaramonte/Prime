@@ -52,8 +52,8 @@ type AddressConverter (targetType : Type) =
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid AddressConverter conversion from source."
 
-[<RequireQualifiedAccess>]
-module Address =
+[<AutoOpen>]
+module AddressModule =
 
     /// Specifies the address of an identifiable value.
     type [<CustomEquality; CustomComparison; TypeConverter (typeof<AddressConverter>)>] 'a Address =
@@ -169,106 +169,106 @@ module Address =
         override this.ToString () =
             Address<'a>.getFullName this |> Name.getNameStr
 
-    /// The empty address.
-    let empty<'a> =
-        { Names = []; HashCode = 0; TypeCarrier = fun (_ : 'a) -> () }
+    [<RequireQualifiedAccess>]
+    module Address =
 
-    /// Make an address from names.
-    let makeFromNames<'a> names : 'a Address =
-        Address.ltoa<'a> names
+        /// The empty address.
+        let empty<'a> =
+            { Names = []; HashCode = 0; TypeCarrier = fun (_ : 'a) -> () }
 
-    /// Make an address from a '/' delimited string.
-    let makeFromFullName<'a> fullName : 'a Address =
-        Address.makeFromFullName<'a> fullName
+        /// Make an address from names.
+        let makeFromNames<'a> names : 'a Address =
+            Address.ltoa<'a> names
 
-    /// Get the names of an address.
-    let getNames address =
-        address.Names
+        /// Make an address from a '/' delimited string.
+        let makeFromFullName<'a> fullName : 'a Address =
+            Address.makeFromFullName<'a> fullName
 
-    /// Change the type of an address.
-    let changeType<'a, 'b> (address : 'a Address) =
-        Address.atoa<'a, 'b> address
+        /// Get the names of an address.
+        let getNames address =
+            address.Names
 
-    /// Get the full name of an address.
-    let getFullName address =
-        Address.getFullName address
+        /// Change the type of an address.
+        let changeType<'a, 'b> (address : 'a Address) =
+            Address.atoa<'a, 'b> address
 
-    /// Get the name of an address.
-    let getName address =
-        getNames address |> List.last
+        /// Get the full name of an address.
+        let getFullName address =
+            Address.getFullName address
 
-    /// Get the address's hash code.
-    let getHashCode address =
-        Address.hash address
+        /// Get the name of an address.
+        let getName address =
+            getNames address |> List.last
 
-    /// Take the head of an address.
-    let head address =
-        List.head address.Names
-        
-    /// Take the tail of an address.
-    let tail<'a> address =
-        makeFromNames<'a> ^ List.tail address.Names
+        /// Get the address's hash code.
+        let getHashCode address =
+            Address.hash address
 
-    /// Take a name of an address.
-    let item index address =
-        List.item index address.Names
+        /// Take the head of an address.
+        let head address =
+            List.head address.Names
+            
+        /// Take the tail of an address.
+        let tail<'a> address =
+            makeFromNames<'a> ^ List.tail address.Names
 
-    /// Take an address composed of the name of an address minus a skipped amount of names.
-    let skip<'a, 'b> n (address : 'a Address) =
-        makeFromNames<'b> ^ List.skip n address.Names
+        /// Take a name of an address.
+        let item index address =
+            List.item index address.Names
 
-    /// Take an address composed of the given number of names of an address.
-    let take<'a, 'b> n (address : 'a Address) =
-        makeFromNames<'b> ^ List.take n address.Names
+        /// Take an address composed of the name of an address minus a skipped amount of names.
+        let skip<'a, 'b> n (address : 'a Address) =
+            makeFromNames<'b> ^ List.skip n address.Names
 
-    /// Take the last name of an address.
-    let last address =
-        List.last address.Names
+        /// Take an address composed of the given number of names of an address.
+        let take<'a, 'b> n (address : 'a Address) =
+            makeFromNames<'b> ^ List.take n address.Names
 
-    /// Take an address composed of all but the last name of an address.
-    let allButLast<'a, 'b> (address : 'a Address) =
-        makeFromNames<'b> ^ List.allButLast address.Names
+        /// Take the last name of an address.
+        let last address =
+            List.last address.Names
 
-    /// Get the length of an address by its names.
-    let length address =
-        List.length address.Names
+        /// Take an address composed of all but the last name of an address.
+        let allButLast<'a, 'b> (address : 'a Address) =
+            makeFromNames<'b> ^ List.allButLast address.Names
 
-    /// Query that an address is devoid of names.
-    let isEmpty address =
-        List.isEmpty address.Names
+        /// Get the length of an address by its names.
+        let length address =
+            List.length address.Names
 
-/// Specifies the address of an identifiable value.
-type 'a Address = 'a Address.Address
+        /// Query that an address is devoid of names.
+        let isEmpty address =
+            List.isEmpty address.Names
 
 [<AutoOpen>]
 module AddressOperators =
-
+    
     /// Convert an address of type 'a to an address of type 'b.
     let inline atoa<'a, 'b> (address : 'a Address) = Address.atoa<'a, 'b> address
-
+    
     /// Convert a names list into an address.
     let inline ltoa<'a> names : 'a Address  = Address.ltoa<'a> names
-
+    
     /// Convert a full name into an address.
     let inline ftoa<'a> fullName : 'a Address = Address.ftoa<'a> fullName
-
+    
     /// Convert a single name into an address.
     let inline ntoa<'a> name : 'a Address  = Address.ntoa<'a> name
-
+    
     /// Convert any address to an obj Address.
     let inline atooa<'a> (address : 'a Address) = Address.atooa<'a> address
-
+    
     /// Concatenate two addresses of the same type.
     let inline acat<'a> (address : 'a Address) (address2 : 'a Address) = Address.acat<'a> address address2
-
+    
     /// Concatenate two addresses, taking the type of first address.
     let inline acatf<'a> (address : 'a Address) (address2 : obj Address) = Address.acatf<'a> address address2
-    
+        
     /// Concatenate two addresses, forcing the type of first address.
     let inline acatff<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatff<'a, 'b> address address2
-
+    
     /// Concatenate two addresses, taking the type of the second address.
     let inline acats<'a> (address : obj Address) (address2 : 'a Address) = Address.acats<'a> address address2
-    
+        
     /// Concatenate two addresses, forcing the type of second address.
     let inline acatsf<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatsf<'a, 'b> address address2

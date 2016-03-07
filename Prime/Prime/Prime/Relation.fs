@@ -51,8 +51,8 @@ type RelationConverter (targetType : Type) =
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid RelationConverter conversion from source."
 
-[<RequireQualifiedAccess>]
-module Relation =
+[<AutoOpen>]
+module RelationModule =
 
     /// A relation that can be resolved to an address via projection.
     type [<CustomEquality; NoComparison; TypeConverter (typeof<RelationConverter>)>] 'a Relation =
@@ -97,22 +97,19 @@ module Relation =
         
         override this.ToString () =
             Relation<'a>.getFullName this |> Name.getNameStr
+
+    [<RequireQualifiedAccess>]
+    module Relation =
+
+        /// Resolve a relationship to an address.
+        let resolve<'a> (address : 'a Address) (relation : 'a Relation) =
+            let names = List.project id (Address.getNames address) relation.OptNames
+            Address.makeFromNames<'a> names
     
-    /// Resolve a relationship to an address.
-    let resolve<'a> (address : 'a Address) (relation : 'a Relation) =
-        let names = List.project id (Address.getNames address) relation.OptNames
-        Address.makeFromNames<'a> names
-
-    /// Make a relation from a list of option names.
-    let makeFromOptNamesList<'a> optNamesList =
-        { OptNames = optNamesList |> List.ofSeq; TypeCarrier = fun (_ : 'a) -> () }
-
-    /// Make an address from a '/' delimited string.
-    let makeFromFullName<'a> fullName =
-        Address<'a>.makeFromFullName fullName
-
-[<AutoOpen>]
-module RelationModule =
-
-    /// A relation that can be resolved to an address via projection.
-    type 'a Relation = 'a Relation.Relation
+        /// Make a relation from a list of option names.
+        let makeFromOptNamesList<'a> optNamesList =
+            { OptNames = optNamesList |> List.ofSeq; TypeCarrier = fun (_ : 'a) -> () }
+    
+        /// Make an address from a '/' delimited string.
+        let makeFromFullName<'a> fullName =
+            Address<'a>.makeFromFullName fullName

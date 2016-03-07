@@ -77,8 +77,8 @@ module Events =
     /// Represents any event.
     let Any = ntoa<obj> !!"*"
 
-[<RequireQualifiedAccess>]
-module EventSystem =
+[<AutoOpen>]
+module EventSystemModule =
 
     /// A publisher-neutral, purely functional event system.
     type [<ReferenceEquality>] 'w EventSystem =
@@ -86,41 +86,41 @@ module EventSystem =
             { Subscriptions : SubscriptionEntries
               Unsubscriptions : UnsubscriptionEntries
               EventStates : Vmap<Guid, obj> }
-              
-    /// Add event state.
-    let addEventState<'a, 'w> key (state : 'a) (eventSystem : 'w EventSystem) =
-        { eventSystem with EventStates = Vmap.add key (state :> obj) eventSystem.EventStates }
 
-    /// Remove event state.
-    let removeEventState<'w> key (eventSystem : 'w EventSystem) =
-        { eventSystem with EventStates = Vmap.remove key eventSystem.EventStates }
-
-    /// Get subscriptions.
-    let getSubscriptions<'w> (eventSystem : 'w EventSystem) =
-        eventSystem.Subscriptions
-
-    /// Get unsubscriptions.
-    let getUnsubscriptions<'w> (eventSystem : 'w EventSystem) =
-        eventSystem.Unsubscriptions
-
-    /// Set subscriptions.
-    let internal setSubscriptions<'w> subscriptions (eventSystem : 'w EventSystem) =
-        { eventSystem with Subscriptions = subscriptions }
-
-    /// Set unsubscriptions.
-    let internal setUnsubscriptions<'w> unsubscriptions (eventSystem : 'w EventSystem) =
-        { eventSystem with Unsubscriptions = unsubscriptions }
-
-    /// Get event state.
-    let getEventState<'a, 'w> key (eventSystem : 'w EventSystem) =
-        let state = Vmap.find key eventSystem.EventStates
-        state :?> 'a
-
-    /// Make an event system.
-    let make () =
-        { Subscriptions = Vmap.makeEmpty ()
-          Unsubscriptions = Vmap.makeEmpty ()
-          EventStates = Vmap.makeEmpty () }
-
-/// A publisher-neutral, purely functional event system.
-type 'w EventSystem = 'w EventSystem.EventSystem
+    [<RequireQualifiedAccess>]
+    module EventSystem =
+                  
+        /// Add event state.
+        let addEventState<'a, 'w> key (state : 'a) (eventSystem : 'w EventSystem) =
+            { eventSystem with EventStates = Vmap.add key (state :> obj) eventSystem.EventStates }
+    
+        /// Remove event state.
+        let removeEventState<'w> key (eventSystem : 'w EventSystem) =
+            { eventSystem with EventStates = Vmap.remove key eventSystem.EventStates }
+    
+        /// Get subscriptions.
+        let getSubscriptions<'w> (eventSystem : 'w EventSystem) =
+            eventSystem.Subscriptions
+    
+        /// Get unsubscriptions.
+        let getUnsubscriptions<'w> (eventSystem : 'w EventSystem) =
+            eventSystem.Unsubscriptions
+    
+        /// Set subscriptions.
+        let internal setSubscriptions<'w> subscriptions (eventSystem : 'w EventSystem) =
+            { eventSystem with Subscriptions = subscriptions }
+    
+        /// Set unsubscriptions.
+        let internal setUnsubscriptions<'w> unsubscriptions (eventSystem : 'w EventSystem) =
+            { eventSystem with Unsubscriptions = unsubscriptions }
+    
+        /// Get event state.
+        let getEventState<'a, 'w> key (eventSystem : 'w EventSystem) =
+            let state = Vmap.find key eventSystem.EventStates
+            state :?> 'a
+    
+        /// Make an event system.
+        let make () =
+            { Subscriptions = Vmap.makeEmpty ()
+              Unsubscriptions = Vmap.makeEmpty ()
+              EventStates = Vmap.makeEmpty () }
