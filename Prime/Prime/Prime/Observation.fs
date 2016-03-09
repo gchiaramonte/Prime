@@ -22,7 +22,7 @@ module Observation =
             let subscriptionAddress = ntoa<'a> ^ Name.make ^ scstring subscriptionKey
             let unsubscribe = fun world -> Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
-                let eventTrace = "Observation.observe" :: evt.Trace
+                let eventTrace = EventTrace.record "Observation" "observe" evt.Trace
                 let world = Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone evt.Data subscriptionAddress eventTrace evt.Publisher world
                 (Cascade, world)
             let world = Eventable.subscribe5<'a, 'o, 'w> subscriptionKey subscription eventAddress observer world
@@ -57,7 +57,7 @@ module Observation =
 
             // subscription for 'a events
             let subscription = fun evt world ->
-                let eventTrace = "Observation.product.a" :: evt.Trace
+                let eventTrace = EventTrace.record4 "Observation" "product" "'a" evt.Trace
                 let (aList : 'a list, bList : 'b list) = Eventable.getEventState stateKey world
                 let aList = evt.Data :: aList
                 let (state, world) =
@@ -72,7 +72,7 @@ module Observation =
 
             // subscription for 'b events
             let subscription' = fun evt world ->
-                let eventTrace = "Observation.product.b" :: evt.Trace
+                let eventTrace = EventTrace.record4 "Observation" "product" "'b" evt.Trace
                 let (aList : 'a list, bList : 'b list) = Eventable.getEventState stateKey world
                 let bList = evt.Data :: bList
                 let (state, world) =
@@ -111,12 +111,12 @@ module Observation =
                 let world = Eventable.unsubscribe<'w> subscriptionKey world
                 Eventable.unsubscribe<'w> subscriptionKey' world
             let subscription = fun evt world ->
-                let eventTrace = "Observation.sum" :: evt.Trace
+                let eventTrace = EventTrace.record "Observation" "sum" evt.Trace
                 let eventData = Left evt.Data
                 let world = Eventable.publish6<Either<'a, 'b>, Participant, 'w> Eventable.sortSubscriptionsNone eventData subscriptionAddress'' eventTrace evt.Publisher world
                 (Cascade, world)
             let subscription' = fun evt world ->
-                let eventTrace = "Observation.sum" :: evt.Trace
+                let eventTrace = EventTrace.record "Observation" "sum" evt.Trace
                 let eventData = Right evt.Data
                 let world = Eventable.publish6<Either<'a, 'b>, Participant, 'w> Eventable.sortSubscriptionsNone eventData subscriptionAddress'' eventTrace evt.Publisher world
                 (Cascade, world)
@@ -138,7 +138,7 @@ module Observation =
             let subscription = fun evt world ->
                 let world =
                     if pred evt world then
-                        let eventTrace = "Observation.filter" :: evt.Trace
+                        let eventTrace = EventTrace.record "Observation" "filter" evt.Trace
                         Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone evt.Data subscriptionAddress eventTrace evt.Publisher world
                     else world
                 (Cascade, world)
@@ -157,7 +157,7 @@ module Observation =
                 let world = unsubscribe world
                 Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
-                let eventTrace = "Observation.map" :: evt.Trace
+                let eventTrace = EventTrace.record "Observation" "map" evt.Trace
                 let world = Eventable.publish6<'b, Participant, 'w> Eventable.sortSubscriptionsNone (mapper evt world) subscriptionAddress eventTrace evt.Publisher world
                 (Cascade, world)
             let world = Eventable.subscribe5<'a, 'o, 'w> subscriptionKey subscription eventAddress observation.Observer world
@@ -183,7 +183,7 @@ module Observation =
                 let world = Eventable.addEventState stateKey state world
                 let world =
                     if tracked then
-                        let eventTrace = "Observation.track4" :: evt.Trace
+                        let eventTrace = EventTrace.record "Observation" "track4" evt.Trace
                         let eventData = transformer state
                         Eventable.publish6<'b, Participant, 'w> Eventable.sortSubscriptionsNone eventData subscriptionAddress eventTrace evt.Publisher world
                     else world
@@ -212,7 +212,7 @@ module Observation =
                 let world = Eventable.addEventState stateKey state world
                 let world =
                     if tracked then
-                        let eventTrace = "Observation.track2" :: evt.Trace
+                        let eventTrace = EventTrace.record "Observation" "track2" evt.Trace
                         Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone state subscriptionAddress eventTrace evt.Publisher world
                     else world
                 (Cascade, world)
@@ -239,7 +239,7 @@ module Observation =
                 let world = Eventable.addEventState stateKey state world
                 let world =
                     if tracked then
-                        let eventTrace = "Observation.track" :: evt.Trace
+                        let eventTrace = EventTrace.record "Observation" "track" evt.Trace
                         Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone evt.Data subscriptionAddress eventTrace evt.Publisher world
                     else world
                 (Cascade, world)
@@ -282,7 +282,7 @@ module Observation =
             let handleEvent = fun _ world -> let world = unsubscribe world in (Cascade, world)
             let world = Eventable.subscribe5 eventKey handleEvent eventAddress observation.Observer world
             let subscription = fun evt world ->
-                let eventTrace = "Observation.until" :: evt.Trace
+                let eventTrace = EventTrace.record "Observation" "until" evt.Trace
                 let world = Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone evt.Data subscriptionAddress eventTrace evt.Publisher world
                 (Cascade, world)
             let world = Eventable.subscribe5<'a, 'o, 'w> subscriptionKey subscription eventAddress' observation.Observer world
@@ -422,7 +422,7 @@ module Observation =
             observation
 
 [<AutoOpen>]
-module ObservationModule =
+module ObservationOperators =
     open Observation
 
     /// Pipe-right arrow that provides special precedence for observations.

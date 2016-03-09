@@ -13,7 +13,7 @@ module EventRecord =
         private
             { ModuleName : string
               FunctionName : string
-              Parameters : obj list }
+              MoreInfo : string }
 
     [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
     module EventRecord =
@@ -21,12 +21,12 @@ module EventRecord =
         let record moduleName functionName =
             { ModuleName = moduleName
               FunctionName = functionName
-              Parameters = [] }
+              MoreInfo = String.Empty }
     
-        let record4 moduleName functionName parameters ignoreParameters =
+        let record3 moduleName functionName moreInfo =
             { ModuleName = moduleName
               FunctionName = functionName
-              Parameters = if ignoreParameters then [] else parameters }
+              MoreInfo = moreInfo }
 
 [<AutoOpen>]
 module EventTrace =
@@ -42,3 +42,11 @@ module EventTrace =
                 true
                 eventFilter
                 eventTrace
+
+        let record moduleName functionName eventTrace =
+            EventRecord.record moduleName functionName :: eventTrace
+
+        let record4 moduleName functionName moreInfo eventTrace =
+            EventRecord.record3 moduleName functionName moreInfo :: eventTrace
+
+        let empty = []

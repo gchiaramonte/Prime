@@ -8,21 +8,25 @@ open Prime
 
 /// The Chain monad. Allows the user to define a chain of operations over the world that
 /// optionally spans across a bounded number of events.
+///
+/// The following is a potentially tail-recursible representation as speculated by @tpetracek -
+/// 'w -> ('w * Either<'e -> Chain<'e, 'a, 'w>, 'a> -> 'a) -> 'a
 type [<NoComparison; NoEquality>] Chain<'e, 'a, 'w when 'w :> 'w Eventable> =
     Chain of ('w -> 'w * Either<'e -> Chain<'e, 'a, 'w>, 'a>)
 
-[<AutoOpen>]
-module ChainBuilder =
-
-    // 'W -> ('W * Choice<'E -> Chain<'E, 'A, 'W>, 'A> -> 'A) -> 'A
+/// Implements the chain monad.
+type ChainBuilder () =
 
     /// Monadic return for the chain monad.
-    let [<DebuggerHidden; DebuggerStepThrough>] internal returnM (a : 'a) : Chain<'e, 'a, 'w> =
+    [<DebuggerHidden; DebuggerStepThrough>]
+    member this.Return (a : 'a) : Chain<'e, 'a, 'w> =
         Chain (fun s -> (s, Right a))
-        
+
     /// Monadic bind for the chain monad.
-    let rec [<DebuggerHidden; DebuggerStepThrough>] internal bind (m : Chain<'e, 'a, 'w>) (cont : 'a -> Chain<'e, 'b, 'w>) : Chain<'e, 'b, 'w> =
+    [<DebuggerHidden; DebuggerStepThrough>]
+    member this.Bind (m : Chain<'e, 'a, 'w>, cont : 'a -> Chain<'e, 'b, 'w>) : Chain<'e, 'b, 'w> =
         Chain (fun world ->
+
             // match m with Chain f -> 
             //    f world (function
             //        | world, Left m ->    ...
@@ -34,13 +38,11 @@ module ChainBuilder =
 
             match (match m with Chain f -> f world) with
             //                             ^--- NOTE: unbounded recursion here
-            | (world, Left m) -> (world, Left (fun e -> bind (m e) cont))
+            | (world, Left m) -> (world, Left (fun e -> this.Bind (m e, cont)))
             | (world, Right v) -> match cont v with Chain f -> f world)
 
-    /// Implements the chain monad.
-    type ChainBuilder () =
-        [<DebuggerHidden; DebuggerStepThrough>] member this.Return op = returnM op
-        [<DebuggerHidden; DebuggerStepThrough>] member this.Bind (m, cont) = bind m cont
+[<AutoOpen>]
+module ChainBuilderModule =
 
     /// Builds the chain monad.
     let chain = ChainBuilder ()
@@ -48,10 +50,10 @@ module ChainBuilder =
 module Chain =
 
     /// Monadic return for the chain monad.
-    let returnM = returnM
+    let inline returnM a = chain.Return a
 
     /// Monadic bind for the chain monad.
-    let bind = bind
+    let inline bind m a = chain.Bind (m, a)
 
     /// Get the world.
     let get : Chain<'e, 'w, 'w> =

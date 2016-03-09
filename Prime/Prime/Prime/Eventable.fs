@@ -13,7 +13,7 @@ type Eventable<'w when 'w :> 'w Eventable> =
         abstract member GetEventSystem : unit -> 'w EventSystem
         abstract member UpdateEventSystem : ('w EventSystem -> 'w EventSystem) -> 'w
         abstract member ContainsParticipant : Participant -> bool
-        abstract member PublishEvent<'a, 'p when 'p :> Participant> : Participant -> 'p -> 'a -> 'a Address -> string list -> obj -> 'w -> Handling * 'w
+        abstract member PublishEvent<'a, 'p when 'p :> Participant> : Participant -> 'p -> 'a -> 'a Address -> EventTrace -> obj -> 'w -> Handling * 'w
         end
 
 [<RequireQualifiedAccess>]
@@ -123,8 +123,12 @@ module Eventable =
             | _ -> reraise ()
         box boxableSubscription
 
+    let logEvent<'w when 'w :> 'w Eventable> eventTrace (world : 'w) =
+        EventSystem.logEvent eventTrace (getEventSystem world)
+
     let publishEvent<'a, 'p, 's, 'w when 'p :> Participant and 's :> Participant and 'w :> 'w Eventable>
         (subscriber : Participant) (publisher : 'p) (eventData : 'a) (eventAddress : 'a Address) eventTrace subscription (world : 'w) =
+        logEvent eventTrace world
         let evt =
             { Data = eventData
               Address = eventAddress

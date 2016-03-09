@@ -39,7 +39,7 @@ type ParticipantOperators =
 type [<ReferenceEquality>] Event<'a, 'p when 'p :> Participant> =
     { Data : 'a
       Address : 'a Address
-      Trace : string list
+      Trace : EventTrace
       Publisher : Participant
       Subscriber : 'p }
 
@@ -123,8 +123,12 @@ module EventSystemModule =
             state :?> 'a
 
         /// Log an event.
-        let logEvent eventTrace (eventSystem : 'w EventSystem) =
-            if List.exists (fun filter -> EventTrace.filter filter eventTrace) eventSystem.EventFilters then
+        let logEvent (eventTrace : EventTrace) (eventSystem : 'w EventSystem) =
+            let shouldLog =
+                match eventSystem.EventFilters with
+                | [] -> true
+                | _ :: _ -> List.exists (fun filter -> EventTrace.filter filter eventTrace) eventSystem.EventFilters
+            if shouldLog then
                 let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventTrace
                 eventSystem.EventLogWriter.WriteLine logStr
 
