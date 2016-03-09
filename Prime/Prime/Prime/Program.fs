@@ -9,6 +9,8 @@ open Prime
 open Prime.Tests
 module Program =
 
+    EventTests.chainWorks ()
+
     /// Performs some ad-hoc tests to compare performance of maps.
     let runTimings make lookup name =
         printfn "%s timings..." name

@@ -233,8 +233,8 @@ type [<Sealed>] VsyncBuilder () =
     (* TODO: Re-enable this code once we find a good definition of Async.ParallelIgnore.
     static member inline ParallelIgnore i s = Vsync.ParallelIgnore i s*)
 
-[<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-module VsyncBuilder =
+[<AutoOpen>]
+module VsyncBuilderModule =
 
     /// The VsyncBuilder instance.
     /// Used like: vsync { return 0 }

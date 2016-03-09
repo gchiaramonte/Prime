@@ -16,7 +16,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <Tailcalls>false</Tailcalls>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -90,6 +90,7 @@
     <Compile Include="SymbolicDescriptor.fs" />
     <Compile Include="SymbolicOperators.fs" />
     <Compile Include="Xtension.fs" />
+    <Compile Include="EventTrace.fs" />
     <Compile Include="EventSystem.fs" />
     <Compile Include="Eventable.fs" />
     <Compile Include="Observation.fs" />

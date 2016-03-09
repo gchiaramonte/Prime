@@ -20,7 +20,7 @@ module Observation =
         let subscribe = fun world ->
             let subscriptionKey = makeGuid ()
             let subscriptionAddress = ntoa<'a> ^ Name.make ^ scstring subscriptionKey
-            let unsubscribe = fun world -> Eventable.unsubscribe subscriptionKey world
+            let unsubscribe = fun world -> Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let eventTrace = "Observation.observe" :: evt.Trace
                 let world = Eventable.publish6<'a, Participant, 'w> Eventable.sortSubscriptionsNone evt.Data subscriptionAddress eventTrace evt.Publisher world
@@ -51,8 +51,8 @@ module Observation =
             // unsubscribe from 'a and 'b events, and remove event state
             let unsubscribe = fun world ->
                 let world = unsubscribe world
-                let world = Eventable.unsubscribe subscriptionKey world
-                let world = Eventable.unsubscribe subscriptionKey' world
+                let world = Eventable.unsubscribe<'w> subscriptionKey world
+                let world = Eventable.unsubscribe<'w> subscriptionKey' world
                 Eventable.removeEventState stateKey world
 
             // subscription for 'a events
@@ -108,8 +108,8 @@ module Observation =
             let subscriptionAddress'' = ntoa<Either<'a, 'b>> ^ Name.make ^ scstring subscriptionKey''
             let unsubscribe = fun world ->
                 let world = unsubscribe world
-                let world = Eventable.unsubscribe subscriptionKey world
-                Eventable.unsubscribe subscriptionKey' world
+                let world = Eventable.unsubscribe<'w> subscriptionKey world
+                Eventable.unsubscribe<'w> subscriptionKey' world
             let subscription = fun evt world ->
                 let eventTrace = "Observation.sum" :: evt.Trace
                 let eventData = Left evt.Data
@@ -132,7 +132,9 @@ module Observation =
             let subscriptionKey = makeGuid ()
             let subscriptionAddress = ntoa<'a> ^ Name.make ^ scstring subscriptionKey
             let (eventAddress, unsubscribe, world) = observation.Subscribe world
-            let unsubscribe = fun world -> let world = unsubscribe world in Eventable.unsubscribe subscriptionKey world
+            let unsubscribe = fun world ->
+                let world = unsubscribe world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let world =
                     if pred evt world then
@@ -151,7 +153,9 @@ module Observation =
             let subscriptionKey = makeGuid ()
             let subscriptionAddress = ntoa<'b> ^ Name.make ^ scstring subscriptionKey
             let (eventAddress, unsubscribe, world) = observation.Subscribe world
-            let unsubscribe = fun world -> let world = unsubscribe world in Eventable.unsubscribe subscriptionKey world
+            let unsubscribe = fun world ->
+                let world = unsubscribe world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let eventTrace = "Observation.map" :: evt.Trace
                 let world = Eventable.publish6<'b, Participant, 'w> Eventable.sortSubscriptionsNone (mapper evt world) subscriptionAddress eventTrace evt.Publisher world
@@ -172,7 +176,7 @@ module Observation =
             let unsubscribe = fun world ->
                 let world = Eventable.removeEventState stateKey world
                 let world = unsubscribe world
-                Eventable.unsubscribe subscriptionKey world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let state = Eventable.getEventState stateKey world
                 let (state, tracked) = tracker state evt world
@@ -200,7 +204,7 @@ module Observation =
             let unsubscribe = fun world ->
                 let world = Eventable.removeEventState stateKey world
                 let world = unsubscribe world
-                Eventable.unsubscribe subscriptionKey world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let optState = Eventable.getEventState stateKey world
                 let state = match optState with Some state -> state | None -> evt.Data
@@ -228,7 +232,7 @@ module Observation =
             let unsubscribe = fun world ->
                 let world = Eventable.removeEventState stateKey world
                 let world = unsubscribe world
-                Eventable.unsubscribe subscriptionKey world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let subscription = fun evt world ->
                 let state = Eventable.getEventState stateKey world
                 let (state, tracked) = tracker state world
@@ -251,7 +255,9 @@ module Observation =
             let subscriptionKey = makeGuid ()
             let subscriptionAddress = ntoa<'a> ^ Name.make ^ scstring subscriptionKey
             let (address, unsubscribe, world) = observation.Subscribe world
-            let unsubscribe = fun world -> let world = unsubscribe world in Eventable.unsubscribe subscriptionKey world
+            let unsubscribe = fun world ->
+                let world = unsubscribe world
+                Eventable.unsubscribe<'w> subscriptionKey world
             let world = Eventable.subscribe5<'a, 'o, 'w> subscriptionKey handleEvent address observation.Observer world
             (subscriptionAddress, unsubscribe, world)
         let observation = { Observer = observation.Observer; Subscribe = subscribe }
@@ -271,8 +277,8 @@ module Observation =
             let (eventAddress', unsubscribe, world) = observation.Subscribe world
             let unsubscribe = fun world ->
                 let world = unsubscribe world
-                let world = Eventable.unsubscribe subscriptionKey world
-                Eventable.unsubscribe eventKey world
+                let world = Eventable.unsubscribe<'w> subscriptionKey world
+                Eventable.unsubscribe<'w> eventKey world
             let handleEvent = fun _ world -> let world = unsubscribe world in (Cascade, world)
             let world = Eventable.subscribe5 eventKey handleEvent eventAddress observation.Observer world
             let subscription = fun evt world ->

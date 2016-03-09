@@ -3,6 +3,7 @@
 
 namespace Prime
 open System
+open System.IO
 open System.Collections.Generic
 open Prime
 
@@ -85,7 +86,9 @@ module EventSystemModule =
         private
             { Subscriptions : SubscriptionEntries
               Unsubscriptions : UnsubscriptionEntries
-              EventStates : Vmap<Guid, obj> }
+              EventStates : Vmap<Guid, obj>
+              EventFilters : EventFilters
+              EventLogWriter: StreamWriter }
 
     [<RequireQualifiedAccess>]
     module EventSystem =
@@ -118,9 +121,17 @@ module EventSystemModule =
         let getEventState<'a, 'w> key (eventSystem : 'w EventSystem) =
             let state = Vmap.find key eventSystem.EventStates
             state :?> 'a
-    
+
+        /// Log an event.
+        let logEvent eventTrace (eventSystem : 'w EventSystem) =
+            if List.exists (fun filter -> EventTrace.filter filter eventTrace) eventSystem.EventFilters then
+                let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventTrace
+                eventSystem.EventLogWriter.WriteLine logStr
+
         /// Make an event system.
-        let make () =
+        let make eventFilters eventLogWriter =
             { Subscriptions = Vmap.makeEmpty ()
               Unsubscriptions = Vmap.makeEmpty ()
-              EventStates = Vmap.makeEmpty () }
+              EventStates = Vmap.makeEmpty ()
+              EventFilters = eventFilters
+              EventLogWriter = eventLogWriter }

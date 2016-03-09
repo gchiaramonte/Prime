@@ -30,7 +30,7 @@ module EventTests =
                 (participant : Participant) publisher eventData eventAddress eventTrace subscription world = 
                 Eventable.publishEvent<'a, 'p, TestParticipant, TestWorld> participant publisher eventData eventAddress eventTrace subscription world
         static member incTestState this = { this with TestState = inc this.TestState }
-        static member make () = { TestState = 0; TestEventSystem = EventSystem.make () }
+        static member make eventFilters eventLogWriter = { TestState = 0; TestEventSystem = EventSystem.make eventFilters eventLogWriter }
 
     let TestEvent = ntoa<int> !!"Int"
     let TestParticipant = { TestAddress = Address.empty<TestParticipant> }
@@ -42,27 +42,27 @@ module EventTests =
     let incTestStateAndResolve (_ : Event<int, TestParticipant>) world = (Resolve, TestWorld.incTestState world)
 
     let [<Fact>] subscribeWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] subscribeAndPublishTwiceWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] subscribeTwiceAndPublishWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] subscribeWithResolutionWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.subscribe incTestStateAndResolve TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
@@ -70,20 +70,20 @@ module EventTests =
 
     let [<Fact>] unsubscribeWorks () =
         let key = makeGuid ()
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = Eventable.subscribe5 key incTestStateAndResolve TestEvent TestParticipant world
         let world = Eventable.unsubscribe key world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         Assert.Equal (0, world.TestState)
 
     let [<Fact>] observeWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world = observe TestEvent TestParticipant |> subscribe incTestStateAndCascade <| world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] observeSubscribeTwiceUnsubscribeOnceWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let observation = observe TestEvent TestParticipant
         let world = subscribe incTestStateAndCascade observation world
         let (unsubscribe, world) = subscribePlus incTestStateAndCascade observation world
@@ -92,7 +92,7 @@ module EventTests =
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] observeUnsubscribeWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let (unsubscribe, world) = observe TestEvent TestParticipant |> subscribePlus incTestStateAndCascade <| world
         let world = unsubscribe world
         let world = Eventable.publish 0 TestEvent ["Test"] TestParticipant world
@@ -100,7 +100,7 @@ module EventTests =
         Assert.Equal (0, world.TestState)
 
     let [<Fact>] filterWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world =
             observe TestEvent TestParticipant |>
             filter (fun _ world -> world.TestState = 0) |>
@@ -111,7 +111,7 @@ module EventTests =
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] mapWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world =
             observe TestEvent TestParticipant |>
             map (fun evt _ -> evt.Data * 2) |>
@@ -121,7 +121,7 @@ module EventTests =
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] scanWorks () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let world =
             observe TestEvent TestParticipant |>
             scan (fun acc evt _ -> acc + evt.Data) 0 |>
@@ -132,7 +132,7 @@ module EventTests =
         Assert.Equal (3, world.TestState)
 
     let [<Fact>] scanDoesntLeaveGarbage () =
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let (unsubscribe, world) =
             observe TestEvent TestParticipant |>
             scan2 (fun a _ _ -> a) |>
@@ -145,11 +145,9 @@ module EventTests =
     let [<Fact>] chainWorks () =
         
         // build everything
-        let world = TestWorld.make ()
+        let world = TestWorld.make [] (makeNullWriter ())
         let chain =
             chain {
-                let! e = next
-                do! update ^ incTestState e
                 do! react incTestStateNoEvent
                 do! reactE incTestState
                 do! pass
@@ -167,12 +165,8 @@ module EventTests =
         Assert.Equal (2, world.TestState)
         
         // and so on...
-        let world = Eventable.publish 3 TestEvent ["Test"] TestParticipant world
-        Assert.Equal (3, world.TestState)
-        
-        // and so on...
         let world = Eventable.publish 4 TestEvent ["Test"] TestParticipant world
-        Assert.Equal (7, world.TestState)
+        Assert.Equal (6, world.TestState)
         
         // assert no garbage is left over after chained computation is concluded
         Assert.True ^ Vmap.isEmpty ^ Eventable.getSubscriptions world

@@ -6,7 +6,7 @@ open System
 open System.Collections.Generic
 open Prime
 
-/// Adds the capability to use purely-functional events with the given type 'w.
+/// Adds the capability to use purely-functional events with the given program type 'w.
 type Eventable<'w when 'w :> 'w Eventable> =
     interface
         abstract member GetLiveness : unit -> Liveness
@@ -22,13 +22,16 @@ module Eventable =
     let private AnyEventAddressesCache =
         Dictionary<obj Address, obj Address list> (HashIdentity.FromFunctions Address<obj>.hash Address<obj>.equals)
 
+    /// Get the event system.
     let getEventSystem<'w when 'w :> 'w Eventable> (world : 'w) =
         world.GetEventSystem ()
 
+    /// Get the event system as tranformed via 'by'.
     let getEventSystemBy<'a, 'w when 'w :> 'w Eventable> (by : EventSystem<'w> -> 'a) (world : 'w) : 'a =
         let eventSystem = world.GetEventSystem ()
         by eventSystem
 
+    /// Update the event system in the world.
     let updateEventSystem<'w when 'w :> 'w Eventable> updater (world : 'w) =
         world.UpdateEventSystem updater
 
