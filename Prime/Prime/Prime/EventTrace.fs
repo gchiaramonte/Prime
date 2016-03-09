@@ -36,17 +36,17 @@ module EventTrace =
     [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
     module EventTrace =
     
-        let filter eventFilter eventTrace =
+        let filter (eventFilter : EventFilter) (eventTrace : EventTrace) =
             List.fold2
                 (fun passed (regex : Regex) (record : EventRecord) -> passed && regex.IsMatch ^ scstring record)
                 true
                 eventFilter
                 eventTrace
 
-        let record moduleName functionName eventTrace =
+        let record moduleName functionName eventTrace : EventTrace =
             EventRecord.record moduleName functionName :: eventTrace
 
-        let record4 moduleName functionName moreInfo eventTrace =
+        let record4 moduleName functionName moreInfo eventTrace : EventTrace =
             EventRecord.record3 moduleName functionName moreInfo :: eventTrace
 
-        let empty = []
+        let empty = [] : EventTrace
