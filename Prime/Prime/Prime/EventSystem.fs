@@ -93,31 +93,31 @@ module EventSystemModule =
 
     [<RequireQualifiedAccess>]
     module EventSystem =
-                  
+
         /// Add event state.
         let addEventState<'a, 'w> key (state : 'a) (eventSystem : 'w EventSystem) =
             { eventSystem with EventStates = Vmap.add key (state :> obj) eventSystem.EventStates }
-    
+
         /// Remove event state.
         let removeEventState<'w> key (eventSystem : 'w EventSystem) =
             { eventSystem with EventStates = Vmap.remove key eventSystem.EventStates }
-    
+
         /// Get subscriptions.
         let getSubscriptions<'w> (eventSystem : 'w EventSystem) =
             eventSystem.Subscriptions
-    
+
         /// Get unsubscriptions.
         let getUnsubscriptions<'w> (eventSystem : 'w EventSystem) =
             eventSystem.Unsubscriptions
-    
+
         /// Set subscriptions.
         let internal setSubscriptions<'w> subscriptions (eventSystem : 'w EventSystem) =
             { eventSystem with Subscriptions = subscriptions }
-    
+
         /// Set unsubscriptions.
         let internal setUnsubscriptions<'w> unsubscriptions (eventSystem : 'w EventSystem) =
             { eventSystem with Unsubscriptions = unsubscriptions }
-    
+
         /// Get event state.
         let getEventState<'a, 'w> key (eventSystem : 'w EventSystem) =
             let state = Vmap.find key eventSystem.EventStates
@@ -126,6 +126,9 @@ module EventSystemModule =
         /// Log an event.
         let logEvent address trace (eventSystem : 'w EventSystem) =
             if eventSystem.EventLogging then
+                // NOTE: for efficiency during normal execution, trace is cons'd up into a reversed list, so we
+                // unreverse it here.
+                let trace = List.rev trace
                 if EventFilter.filter address trace eventSystem.EventFilter then
                     eventSystem.EventLogger ^ scstring address + "|Trace|" + scstring trace
 

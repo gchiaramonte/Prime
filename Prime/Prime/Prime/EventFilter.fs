@@ -68,7 +68,7 @@ module EventFilter =
             let addressStr = scstring address
             if pattern.AddressPattern.IsMatch addressStr then
                 let mutable passes = true
-                let mutable enr = pattern.TracePattern |> Seq.rev |> enumerator
+                let mutable enr = enumerator pattern.TracePattern
                 for eventInfo in trace do
                     if passes && enr.MoveNext () then
                         passes <- enr.Current.IsMatch (scstring eventInfo)
