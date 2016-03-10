@@ -123,13 +123,13 @@ module EventSystemModule =
             state :?> 'a
 
         /// Log an event.
-        let logEvent (eventTrace : EventTrace) (eventSystem : 'w EventSystem) =
+        let logEvent eventAddress (eventTrace : EventTrace) (eventSystem : 'w EventSystem) =
             let shouldLog =
                 match eventSystem.EventFilters with
                 | [] -> true
-                | _ :: _ -> List.exists (fun filter -> EventTrace.filter filter eventTrace) eventSystem.EventFilters
+                | _ :: _ -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
             if shouldLog then
-                let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventTrace
+                let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
                 eventSystem.EventLogWriter.WriteLine logStr
 
         /// Make an event system.
