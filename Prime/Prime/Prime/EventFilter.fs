@@ -50,18 +50,20 @@ module EventFilter =
     type [<ReferenceEquality>] EventFilter =
         | Or of EventFilter list
         | Nor of EventFilter list
+        | Not of EventFilter list
         | And of EventFilter list
         | Nand of EventFilter list
         | Pattern of EventPattern
         | Empty
 
-    /// Query the an event should be logged
-    let rec shouldLog address trace expr =
+    /// Filter events.
+    let rec filter address trace expr =
         match expr with
-        | EventFilter.Or exprs -> List.fold (fun passed expr -> passed || shouldLog address trace expr) false exprs
-        | EventFilter.Nor exprs -> List.fold (fun passed expr -> not passed && not (shouldLog address trace expr)) false exprs
-        | EventFilter.And exprs -> List.fold (fun passed expr -> passed && shouldLog address trace expr) true exprs
-        | EventFilter.Nand exprs -> List.fold (fun passed expr -> not (passed && shouldLog address trace expr)) true exprs
+        | EventFilter.Or exprs -> List.fold (fun passed expr -> passed || filter address trace expr) false exprs
+        | EventFilter.Nor exprs -> not ^ List.fold (fun passed expr -> passed || filter address trace expr) false exprs
+        | EventFilter.Not exprs -> List.fold (fun passed expr -> not passed && not (filter address trace expr)) false exprs
+        | EventFilter.And exprs -> List.fold (fun passed expr -> passed && filter address trace expr) true exprs
+        | EventFilter.Nand exprs -> not ^ List.fold (fun passed expr -> passed && filter address trace expr) true exprs
         | EventFilter.Pattern pattern ->
             let addressStr = scstring address
             if pattern.AddressPattern.IsMatch addressStr then

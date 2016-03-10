@@ -126,7 +126,7 @@ module EventSystemModule =
         /// Log an event.
         let logEvent address trace (eventSystem : 'w EventSystem) =
             if eventSystem.EventLogging then
-                if EventFilter.shouldLog address trace eventSystem.EventFilter then
+                if EventFilter.filter address trace eventSystem.EventFilter then
                     eventSystem.EventLogger ^ scstring address + "|Trace|" + scstring trace
 
         /// Make an event system.
