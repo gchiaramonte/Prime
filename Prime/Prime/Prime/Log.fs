@@ -14,11 +14,11 @@ module Log =
         let now = DateTime.UtcNow
         now.ToString "yyyy-MM-dd HH\:mm\:ss.ffff"
 
-    /// Log a message with a Trace.WriteLine.
-    let note message =
-        Trace.WriteLine (getUtcNowStr () + "|Note|" + message)
+    /// Log a remark message with a Trace.WriteLine.
+    let remark message =
+        Trace.WriteLine (getUtcNowStr () + "|Remark|" + message)
 
-    /// Log a message with Debug.Fail and call to note.
+    /// Log a debug message with Debug.Fail and call to remark.
     let debug message =
 #if DEBUG
         Debug.Fail (getUtcNowStr () + "|Debug|" + message)
@@ -26,7 +26,7 @@ module Log =
         ignore message
 #endif
 
-    /// Conditional debug call where condition is lazily evaluated.
+    /// Conditional debug message call where condition is lazily evaluated.
     let debugIf predicate message =
 #if DEBUG
         if predicate () then debug message
@@ -34,11 +34,11 @@ module Log =
         ignore (predicate, message)
 #endif
 
-    /// Log a message with a Trace.Fail and call to note.
+    /// Log a trace message with a Trace.Fail and call to remark.
     let trace message =
         Trace.Fail (getUtcNowStr () + "|Trace|" + message)
 
-    /// Conditional trace call where condition is eagerly evaluted.
+    /// Conditional trace message call where condition is eagerly evaluted.
     let traceIf bl message =
         if bl then trace message
 

@@ -87,9 +87,9 @@ module EventSystemModule =
             { Subscriptions : SubscriptionEntries
               Unsubscriptions : UnsubscriptionEntries
               EventStates : Vmap<Guid, obj>
+              EventLogger : string -> unit
               EventLogging : bool
-              EventFilters : EventFilters
-              EventLogWriter: StreamWriter }
+              EventFilters : EventFilters }
 
     [<RequireQualifiedAccess>]
     module EventSystem =
@@ -131,14 +131,13 @@ module EventSystemModule =
                 | (true, _ :: _) -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
                 | (false, _) -> false
             if shouldLog then
-                let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
-                eventSystem.EventLogWriter.WriteLine logStr
+                Log.remark ^ "Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
 
         /// Make an event system.
-        let make eventLogging eventFilters eventLogWriter =
+        let make eventLogger eventLogging eventFilters =
             { Subscriptions = Vmap.makeEmpty ()
               Unsubscriptions = Vmap.makeEmpty ()
               EventStates = Vmap.makeEmpty ()
+              EventLogger = eventLogger
               EventLogging = eventLogging
-              EventFilters = eventFilters
-              EventLogWriter = eventLogWriter }
+              EventFilters = eventFilters }

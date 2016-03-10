@@ -145,14 +145,6 @@ module Operators =
         let bytes = Array.create<byte> 8 (byte 0)
         Guid (m, int16 (n >>> 16), int16 n, bytes)
 
-    /// Make a null stream reader.
-    let makeNullReader () =
-        new StreamReader (new MemoryStream ())
-
-    /// Make a null stream writer.
-    let makeNullWriter () =
-        new StreamWriter (new MemoryStream ())
-
     /// Fail with an unexpected match failure.
     let failwithumf () =
         let stackTrace = StackTrace ()

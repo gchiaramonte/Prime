@@ -31,8 +31,8 @@ module EventTests =
                 Eventable.publishEvent<'a, 'p, TestParticipant, TestWorld> participant publisher eventData eventAddress eventTrace subscription world
         static member incTestState this =
             { this with TestState = inc this.TestState }
-        static member make eventLogging eventFilters eventLogWriter =
-            { TestState = 0; TestEventSystem = EventSystem.make eventLogging eventFilters eventLogWriter }
+        static member make eventLogger eventLogging eventFilters =
+            { TestState = 0; TestEventSystem = EventSystem.make eventLogger eventLogging eventFilters }
 
     let TestEvent = ntoa<int> !!"Int"
     let TestParticipant = { TestAddress = Address.empty<TestParticipant> }
@@ -44,27 +44,27 @@ module EventTests =
     let incTestStateAndResolve (_ : Event<int, TestParticipant>) world = (Resolve, TestWorld.incTestState world)
 
     let [<Fact>] subscribeWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] subscribeAndPublishTwiceWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] subscribeTwiceAndPublishWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] subscribeWithResolutionWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = Eventable.subscribe incTestStateAndCascade TestEvent TestParticipant world
         let world = Eventable.subscribe incTestStateAndResolve TestEvent TestParticipant world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
@@ -72,20 +72,20 @@ module EventTests =
 
     let [<Fact>] unsubscribeWorks () =
         let key = makeGuid ()
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = Eventable.subscribe5 key incTestStateAndResolve TestEvent TestParticipant world
         let world = Eventable.unsubscribe key world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         Assert.Equal (0, world.TestState)
 
     let [<Fact>] observeWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world = observe TestEvent TestParticipant |> subscribe incTestStateAndCascade <| world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] observeSubscribeTwiceUnsubscribeOnceWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let observation = observe TestEvent TestParticipant
         let world = subscribe incTestStateAndCascade observation world
         let (unsubscribe, world) = subscribePlus incTestStateAndCascade observation world
@@ -94,7 +94,7 @@ module EventTests =
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] observeUnsubscribeWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let (unsubscribe, world) = observe TestEvent TestParticipant |> subscribePlus incTestStateAndCascade <| world
         let world = unsubscribe world
         let world = Eventable.publish 0 TestEvent EventTrace.empty TestParticipant world
@@ -102,7 +102,7 @@ module EventTests =
         Assert.Equal (0, world.TestState)
 
     let [<Fact>] filterWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world =
             observe TestEvent TestParticipant |>
             filter (fun _ world -> world.TestState = 0) |>
@@ -113,7 +113,7 @@ module EventTests =
         Assert.Equal (1, world.TestState)
 
     let [<Fact>] mapWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world =
             observe TestEvent TestParticipant |>
             map (fun evt _ -> evt.Data * 2) |>
@@ -123,7 +123,7 @@ module EventTests =
         Assert.Equal (2, world.TestState)
 
     let [<Fact>] scanWorks () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let world =
             observe TestEvent TestParticipant |>
             scan (fun acc evt _ -> acc + evt.Data) 0 |>
@@ -134,7 +134,7 @@ module EventTests =
         Assert.Equal (3, world.TestState)
 
     let [<Fact>] scanDoesntLeaveGarbage () =
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let (unsubscribe, world) =
             observe TestEvent TestParticipant |>
             scan2 (fun a _ _ -> a) |>
@@ -147,7 +147,7 @@ module EventTests =
     let [<Fact>] chainWorks () =
         
         // build everything
-        let world = TestWorld.make false [] (makeNullWriter ())
+        let world = TestWorld.make ignore false []
         let chain =
             chain {
                 let! e = next
