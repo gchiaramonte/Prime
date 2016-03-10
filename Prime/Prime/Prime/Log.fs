@@ -14,11 +14,11 @@ module Log =
         let now = DateTime.UtcNow
         now.ToString "yyyy-MM-dd HH\:mm\:ss.ffff"
 
-    /// Log a remark message with a Trace.WriteLine.
-    let remark message =
-        Trace.WriteLine (getUtcNowStr () + "|Remark|" + message)
+    /// Log a purely informational message with a Trace.WriteLine.
+    let info message =
+        Trace.WriteLine (getUtcNowStr () + "|Info|" + message)
 
-    /// Log a debug message with Debug.Fail and call to remark.
+    /// Log a debug message with Debug.Fail and call to info.
     let debug message =
 #if DEBUG
         Debug.Fail (getUtcNowStr () + "|Debug|" + message)
@@ -34,7 +34,7 @@ module Log =
         ignore (predicate, message)
 #endif
 
-    /// Log a trace message with a Trace.Fail and call to remark.
+    /// Log a trace message with a Trace.Fail and call to info.
     let trace message =
         Trace.Fail (getUtcNowStr () + "|Trace|" + message)
 

@@ -131,7 +131,7 @@ module EventSystemModule =
                 | (true, _ :: _) -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
                 | (false, _) -> false
             if shouldLog then
-                Log.remark ^ "Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
+                eventSystem.EventLogger ^ "Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
 
         /// Make an event system.
         let make eventLogger eventLogging eventFilters =
