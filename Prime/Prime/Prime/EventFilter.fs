@@ -47,6 +47,7 @@ and [<ReferenceEquality; TypeConverter (typeof<EventPatternConverter>)>] EventPa
 [<RequireQualifiedAccess>]
 module EventFilter =
 
+    /// Describes how events are filtered.
     type [<ReferenceEquality>] EventFilter =
         | Or of EventFilter list
         | Nor of EventFilter list
@@ -57,19 +58,18 @@ module EventFilter =
         | Empty
 
     /// Filter events.
-    let rec filter address trace expr =
-        match expr with
-        | EventFilter.Or exprs -> List.fold (fun passed expr -> passed || filter address trace expr) false exprs
-        | EventFilter.Nor exprs -> not ^ List.fold (fun passed expr -> passed || filter address trace expr) false exprs
-        | EventFilter.Not exprs -> List.fold (fun passed expr -> not passed && not (filter address trace expr)) false exprs
-        | EventFilter.And exprs -> List.fold (fun passed expr -> passed && filter address trace expr) true exprs
-        | EventFilter.Nand exprs -> not ^ List.fold (fun passed expr -> passed && filter address trace expr) true exprs
+    let rec filter addressStr traceRev eventFilter =
+        match eventFilter with
+        | EventFilter.Or exprs -> List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
+        | EventFilter.Nor exprs -> not ^ List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
+        | EventFilter.Not exprs -> List.fold (fun passed eventFilter -> not passed && not (filter addressStr traceRev eventFilter)) false exprs
+        | EventFilter.And exprs -> List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
+        | EventFilter.Nand exprs -> not ^ List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
         | EventFilter.Pattern pattern ->
-            let addressStr = scstring address
             if pattern.AddressPattern.IsMatch addressStr then
                 let mutable passes = true
                 let mutable enr = enumerator pattern.TracePattern
-                for eventInfo in trace do
+                for eventInfo in traceRev do
                     if passes && enr.MoveNext () then
                         passes <- enr.Current.IsMatch (scstring eventInfo)
                 passes
@@ -79,4 +79,5 @@ module EventFilter =
 [<AutoOpen>]
 module EventFilterModule =
 
+    /// Describes how events are filtered.
     type EventFilter = EventFilter.EventFilter

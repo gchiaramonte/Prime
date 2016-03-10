@@ -124,7 +124,7 @@ module Eventable =
         box boxableSubscription
 
     let logEvent<'a, 'w when 'w :> 'w Eventable> (eventAddress : 'a Address) eventTrace (world : 'w) =
-        EventSystem.logEvent eventAddress eventTrace (getEventSystem world)
+        EventSystem.logEvent<'a, 'w> eventAddress eventTrace (getEventSystem world)
 
     let publishEvent<'a, 'p, 's, 'w when 'p :> Participant and 's :> Participant and 'w :> 'w Eventable>
         (subscriber : Participant) (publisher : 'p) (eventData : 'a) (eventAddress : 'a Address) eventTrace subscription (world : 'w) =
@@ -148,9 +148,9 @@ module Eventable =
         subscriptions
 
     /// Publish an event, using the given getSubscriptions and publishSorter procedures to arrange the order to which subscriptions are published.
-    let publish7<'a, 'p, 'w when 'p :> Participant and 'w :> Eventable<'w>>
+    let publish7<'a, 'p, 'w when 'p :> Participant and 'w :> 'w Eventable>
         getSubscriptions (publishSorter : SubscriptionSorter<'w>) (eventData : 'a) (eventAddress : 'a Address) eventTrace (publisher : 'p) (world : 'w) =
-        logEvent eventAddress eventTrace world
+        logEvent<'a, 'w> eventAddress eventTrace world
         let objEventAddress = atooa eventAddress
         let subscriptions = getSubscriptions publishSorter objEventAddress world
         let (_, world) =
@@ -166,17 +166,17 @@ module Eventable =
         world
 
     /// Publish an event, using the given publishSorter procedure to arrange the order to which subscriptions are published.
-    let publish6<'a, 'p, 'w when 'p :> Participant and 'w :> Eventable<'w>>
+    let publish6<'a, 'p, 'w when 'p :> Participant and 'w :> 'w Eventable>
         (publishSorter : SubscriptionSorter<'w>) (eventData : 'a) (eventAddress : 'a Address) eventTrace (publisher : 'p) (world : 'w) =
         publish7<'a, 'p, 'w> getSubscriptionsSorted3 publishSorter eventData eventAddress eventTrace publisher world
 
     /// Publish an event with no subscription sorting.
-    let publish<'a, 'p, 'w when 'p :> Participant and 'w :> Eventable<'w>>
+    let publish<'a, 'p, 'w when 'p :> Participant and 'w :> 'w Eventable>
         (eventData : 'a) (eventAddress : 'a Address) eventTrace (publisher : 'p) (world : 'w) =
         publish6<'a, 'p, 'w> sortSubscriptionsNone eventData eventAddress eventTrace publisher world
 
     /// Unsubscribe from an event.
-    let unsubscribe<'w when 'w :> Eventable<'w>> subscriptionKey (world : 'w) =
+    let unsubscribe<'w when 'w :> 'w Eventable> subscriptionKey (world : 'w) =
         let (subscriptions, unsubscriptions) = (getSubscriptions world, getUnsubscriptions world)
         match Vmap.tryFind subscriptionKey unsubscriptions with
         | Some (eventAddress, subscriber) ->

@@ -124,13 +124,12 @@ module EventSystemModule =
             state :?> 'a
 
         /// Log an event.
-        let logEvent address trace (eventSystem : 'w EventSystem) =
+        let logEvent<'a, 'w> (address : 'a Address) (trace : EventTrace) (eventSystem : 'w EventSystem) =
             if eventSystem.EventLogging then
-                // NOTE: for efficiency during normal execution, trace is cons'd up into a reversed list, so we
-                // unreverse it here.
-                let trace = List.rev trace
-                if EventFilter.filter address trace eventSystem.EventFilter then
-                    eventSystem.EventLogger ^ scstring address + "|Trace|" + scstring trace
+                let addressStr = scstring address
+                let traceRev = List.rev trace // for efficiency during normal execution, trace is cons'd up into a reversed list
+                if EventFilter.filter addressStr traceRev eventSystem.EventFilter then
+                    eventSystem.EventLogger ^ addressStr + "|Trace|" + scstring traceRev
 
         /// Make an event system.
         let make eventLogger eventLogging eventFilter =
