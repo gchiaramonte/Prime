@@ -10,7 +10,7 @@ module Log =
 
     let mutable private Initialized = false
 
-    let getUtcNowStr () =
+    let private getUtcNowStr () =
         let now = DateTime.UtcNow
         now.ToString "yyyy-MM-dd HH\:mm\:ss.ffff"
 
