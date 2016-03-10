@@ -46,27 +46,23 @@ and [<ReferenceEquality; TypeConverter (typeof<EventFilterConverter>)>] EventFil
 
 type EventFilters = EventFilter list
 
-[<AutoOpen>]
+type [<CLIMutable; ReferenceEquality>] EventInfo =
+    { ModuleName : string
+      FunctionName : string
+      MoreInfo : string }
+
+[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module EventInfo =
 
-    type [<ReferenceEquality>] EventInfo =
-        private
-            { ModuleName : string
-              FunctionName : string
-              MoreInfo : string }
+    let record moduleName functionName =
+        { ModuleName = moduleName
+          FunctionName = functionName
+          MoreInfo = String.Empty }
 
-    [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
-    module EventInfo =
-
-        let record moduleName functionName =
-            { ModuleName = moduleName
-              FunctionName = functionName
-              MoreInfo = String.Empty }
-
-        let record3 moduleName functionName moreInfo =
-            { ModuleName = moduleName
-              FunctionName = functionName
-              MoreInfo = moreInfo }
+    let record3 moduleName functionName moreInfo =
+        { ModuleName = moduleName
+          FunctionName = functionName
+          MoreInfo = moreInfo }
 
 [<AutoOpen>]
 module EventTrace =
@@ -82,7 +78,7 @@ module EventTrace =
                 let mutable passes = true
                 let mutable enr = (eventFilter.TraceFilter :> _ seq).GetEnumerator ()
                 for eventInfo in eventTrace do
-                    if passes then
+                    if passes && enr.MoveNext () then
                         passes <- enr.Current.IsMatch (scstring eventInfo)
                 passes
             else false
@@ -93,4 +89,5 @@ module EventTrace =
         let record4 moduleName functionName moreInfo eventTrace : EventTrace =
             EventInfo.record3 moduleName functionName moreInfo :: eventTrace
 
-        let empty = [] : EventTrace
+        let empty : EventTrace =
+            []

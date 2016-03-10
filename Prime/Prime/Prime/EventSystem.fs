@@ -87,6 +87,7 @@ module EventSystemModule =
             { Subscriptions : SubscriptionEntries
               Unsubscriptions : UnsubscriptionEntries
               EventStates : Vmap<Guid, obj>
+              EventLogging : bool
               EventFilters : EventFilters
               EventLogWriter: StreamWriter }
 
@@ -125,17 +126,19 @@ module EventSystemModule =
         /// Log an event.
         let logEvent eventAddress (eventTrace : EventTrace) (eventSystem : 'w EventSystem) =
             let shouldLog =
-                match eventSystem.EventFilters with
-                | [] -> true
-                | _ :: _ -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
+                match (eventSystem.EventLogging, eventSystem.EventFilters) with
+                | (true, []) -> true
+                | (true, _ :: _) -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
+                | (false, _) -> false
             if shouldLog then
                 let logStr = Log.getUtcNowStr () + "|Event|" + scstring eventAddress + "|Trace|" + scstring eventTrace
                 eventSystem.EventLogWriter.WriteLine logStr
 
         /// Make an event system.
-        let make eventFilters eventLogWriter =
+        let make eventLogging eventFilters eventLogWriter =
             { Subscriptions = Vmap.makeEmpty ()
               Unsubscriptions = Vmap.makeEmpty ()
               EventStates = Vmap.makeEmpty ()
+              EventLogging = eventLogging
               EventFilters = eventFilters
               EventLogWriter = eventLogWriter }
