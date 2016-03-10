@@ -128,7 +128,6 @@ module Eventable =
 
     let publishEvent<'a, 'p, 's, 'w when 'p :> Participant and 's :> Participant and 'w :> 'w Eventable>
         (subscriber : Participant) (publisher : 'p) (eventData : 'a) (eventAddress : 'a Address) eventTrace subscription (world : 'w) =
-        logEvent eventAddress eventTrace world
         let evt =
             { Data = eventData
               Address = eventAddress
@@ -151,6 +150,7 @@ module Eventable =
     /// Publish an event, using the given getSubscriptions and publishSorter procedures to arrange the order to which subscriptions are published.
     let publish7<'a, 'p, 'w when 'p :> Participant and 'w :> Eventable<'w>>
         getSubscriptions (publishSorter : SubscriptionSorter<'w>) (eventData : 'a) (eventAddress : 'a Address) eventTrace (publisher : 'p) (world : 'w) =
+        logEvent eventAddress eventTrace world
         let objEventAddress = atooa eventAddress
         let subscriptions = getSubscriptions publishSorter objEventAddress world
         let (_, world) =

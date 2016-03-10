@@ -91,6 +91,7 @@
     <Compile Include="SymbolicOperators.fs" />
     <Compile Include="Xtension.fs" />
     <Compile Include="EventTrace.fs" />
+    <Compile Include="EventFilter.fs" />
     <Compile Include="EventSystem.fs" />
     <Compile Include="Eventable.fs" />
     <Compile Include="Observation.fs" />

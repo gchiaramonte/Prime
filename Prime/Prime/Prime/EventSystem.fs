@@ -89,7 +89,7 @@ module EventSystemModule =
               EventStates : Vmap<Guid, obj>
               EventLogger : string -> unit
               EventLogging : bool
-              EventFilters : EventFilters }
+              EventFilter : EventFilter }
 
     [<RequireQualifiedAccess>]
     module EventSystem =
@@ -124,20 +124,16 @@ module EventSystemModule =
             state :?> 'a
 
         /// Log an event.
-        let logEvent eventAddress (eventTrace : EventTrace) (eventSystem : 'w EventSystem) =
-            let shouldLog =
-                match (eventSystem.EventLogging, eventSystem.EventFilters) with
-                | (true, []) -> true
-                | (true, _ :: _) -> List.exists (fun filter -> EventTrace.filter filter eventAddress eventTrace) eventSystem.EventFilters
-                | (false, _) -> false
-            if shouldLog then
-                eventSystem.EventLogger ^ scstring eventAddress + "|Trace|" + scstring eventTrace
+        let logEvent address trace (eventSystem : 'w EventSystem) =
+            if eventSystem.EventLogging then
+                if EventFilter.shouldLog address trace eventSystem.EventFilter then
+                    eventSystem.EventLogger ^ scstring address + "|Trace|" + scstring trace
 
         /// Make an event system.
-        let make eventLogger eventLogging eventFilters =
+        let make eventLogger eventLogging eventFilter =
             { Subscriptions = Vmap.makeEmpty ()
               Unsubscriptions = Vmap.makeEmpty ()
               EventStates = Vmap.makeEmpty ()
               EventLogger = eventLogger
               EventLogging = eventLogging
-              EventFilters = eventFilters }
+              EventFilter = eventFilter }
