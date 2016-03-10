@@ -76,7 +76,7 @@ module EventTrace =
             let addressStr = scstring eventAddress
             if eventFilter.AddressFilter.IsMatch addressStr then
                 let mutable passes = true
-                let mutable enr = (eventFilter.TraceFilter :> _ seq).GetEnumerator ()
+                let mutable enr = enumerator eventFilter.TraceFilter
                 for eventInfo in eventTrace do
                     if passes && enr.MoveNext () then
                         passes <- enr.Current.IsMatch (scstring eventInfo)

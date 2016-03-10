@@ -135,6 +135,10 @@ module Operators =
     let inline enumerable<'a> enumeratable =
         System.Linq.Enumerable.Cast<'a> enumeratable
 
+    /// Get the enumerator for a sequence.
+    let inline enumerator enumeratable =
+        (enumeratable :> _ seq).GetEnumerator ()
+
     /// Make a Guid.
     let inline makeGuid () =
         Guid.NewGuid ()

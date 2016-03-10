@@ -92,7 +92,10 @@ module Symbol =
 
     let rec writeSymbol symbol =
         match symbol with
-        | Atom str -> str
+        | Atom str ->
+            if Seq.isEmpty str || Seq.exists Char.IsWhiteSpace str
+            then OpenStringStr + str + CloseStringStr
+            else str
         | Quote str -> OpenQuoteStr + str + CloseQuoteStr
         | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
 
