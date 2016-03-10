@@ -124,7 +124,7 @@ module EventSystemModule =
             state :?> 'a
 
         /// Log an event.
-        let logEvent<'a, 'w> (address : 'a Address) (trace : EventTrace) (eventSystem : 'w EventSystem) =
+        let logEvent<'w> (address : obj Address) (trace : EventTrace) (eventSystem : 'w EventSystem) =
             if eventSystem.EventLogging then
                 let addressStr = scstring address
                 let traceRev = List.rev trace // for efficiency during normal execution, trace is cons'd up into a reversed list

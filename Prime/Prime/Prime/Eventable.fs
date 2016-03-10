@@ -123,8 +123,8 @@ module Eventable =
             | _ -> reraise ()
         box boxableSubscription
 
-    let logEvent<'a, 'w when 'w :> 'w Eventable> (eventAddress : 'a Address) eventTrace (world : 'w) =
-        EventSystem.logEvent<'a, 'w> eventAddress eventTrace (getEventSystem world)
+    let logEvent<'w when 'w :> 'w Eventable> eventAddress eventTrace (world : 'w) =
+        EventSystem.logEvent<'w> eventAddress eventTrace (getEventSystem world)
 
     let publishEvent<'a, 'p, 's, 'w when 'p :> Participant and 's :> Participant and 'w :> 'w Eventable>
         (subscriber : Participant) (publisher : 'p) (eventData : 'a) (eventAddress : 'a Address) eventTrace subscription (world : 'w) =
@@ -150,8 +150,8 @@ module Eventable =
     /// Publish an event, using the given getSubscriptions and publishSorter procedures to arrange the order to which subscriptions are published.
     let publish7<'a, 'p, 'w when 'p :> Participant and 'w :> 'w Eventable>
         getSubscriptions (publishSorter : SubscriptionSorter<'w>) (eventData : 'a) (eventAddress : 'a Address) eventTrace (publisher : 'p) (world : 'w) =
-        logEvent<'a, 'w> eventAddress eventTrace world
         let objEventAddress = atooa eventAddress
+        logEvent<'w> objEventAddress eventTrace world
         let subscriptions = getSubscriptions publishSorter objEventAddress world
         let (_, world) =
             List.foldWhile
