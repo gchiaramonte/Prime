@@ -129,7 +129,7 @@ module EventSystemModule =
                 let addressStr = scstring address
                 let traceRev = List.rev trace // for efficiency during normal execution, trace is cons'd up into a reversed list
                 if EventFilter.filter addressStr traceRev eventSystem.EventFilter then
-                    eventSystem.EventLogger ^ addressStr + "|Trace|" + scstring traceRev
+                    eventSystem.EventLogger ^ addressStr + "|" + scstring traceRev
 
         /// Make an event system.
         let make eventLogger eventLogging eventFilter =

@@ -242,33 +242,33 @@ module AddressModule =
 
 [<AutoOpen>]
 module AddressOperators =
-    
+
     /// Convert an address of type 'a to an address of type 'b.
     let inline atoa<'a, 'b> (address : 'a Address) = Address.atoa<'a, 'b> address
-    
+
     /// Convert a names list into an address.
     let inline ltoa<'a> names : 'a Address  = Address.ltoa<'a> names
-    
+
     /// Convert a full name into an address.
     let inline ftoa<'a> fullName : 'a Address = Address.ftoa<'a> fullName
-    
+
     /// Convert a single name into an address.
     let inline ntoa<'a> name : 'a Address  = Address.ntoa<'a> name
-    
+
     /// Convert any address to an obj Address.
     let inline atooa<'a> (address : 'a Address) = Address.atooa<'a> address
-    
+
     /// Concatenate two addresses of the same type.
     let inline acat<'a> (address : 'a Address) (address2 : 'a Address) = Address.acat<'a> address address2
-    
+
     /// Concatenate two addresses, taking the type of first address.
     let inline acatf<'a> (address : 'a Address) (address2 : obj Address) = Address.acatf<'a> address address2
-        
+
     /// Concatenate two addresses, forcing the type of first address.
     let inline acatff<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatff<'a, 'b> address address2
-    
+
     /// Concatenate two addresses, taking the type of the second address.
     let inline acats<'a> (address : obj Address) (address2 : 'a Address) = Address.acats<'a> address address2
-        
+
     /// Concatenate two addresses, forcing the type of second address.
     let inline acatsf<'a, 'b> (address : 'a Address) (address2 : 'b Address) = Address.acatsf<'a, 'b> address address2
