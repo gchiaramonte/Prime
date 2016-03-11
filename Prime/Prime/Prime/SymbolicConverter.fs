@@ -122,13 +122,13 @@ type SymbolicConverter (targetType : Type) =
         if destType.IsPrimitive then
             match symbol with
             | Atom str -> (TypeDescriptor.GetConverter destType).ConvertFromString str
-            | Quote _ -> failwith "Expected Symbol.Atom for conversion to string."
-            | Symbols _ -> failwith "Expected Symbol.Atom for conversion to string."
+            | Quote _ -> failwith "Expected Atom value for conversion to string."
+            | Symbols _ -> failwith "Expected Atom value for conversion to string."
         elif destType = typeof<string> then
             match symbol with
             | Atom str -> str :> obj
-            | Quote _ -> failwith "Expected Symbol.Atom for conversion to string."
-            | Symbols _ -> failwith "Expected Symbol.Atom for conversion to string."
+            | Quote _ -> failwith "Expected Atom value for conversion to string."
+            | Symbols _ -> failwith "Expected Atom value for conversion to string."
         elif destType = typeof<Symbol> then
             // nothing to do when we want a symbol and already have it
             symbol :> obj
