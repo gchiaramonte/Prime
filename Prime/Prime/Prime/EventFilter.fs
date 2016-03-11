@@ -46,22 +46,18 @@ module EventFilter =
 
     /// Describes how events are filtered.
     type [<ReferenceEquality>] EventFilter =
-        | Or of EventFilter list
-        | Nor of EventFilter list
-        | Not of EventFilter list
-        | And of EventFilter list
-        | Nand of EventFilter list
+        | Any of EventFilter list
+        | All of EventFilter list
+        | None of EventFilter list
         | Pattern of Rexpr * Rexpr list
         | Empty
 
     /// Filter events.
     let rec filter addressStr traceRev eventFilter =
         match eventFilter with
-        | EventFilter.Or exprs -> List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
-        | EventFilter.Nor exprs -> not ^ List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
-        | EventFilter.Not exprs -> List.fold (fun passed eventFilter -> not passed && not (filter addressStr traceRev eventFilter)) false exprs
-        | EventFilter.And exprs -> List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
-        | EventFilter.Nand exprs -> not ^ List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
+        | EventFilter.Any exprs -> List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
+        | EventFilter.All exprs -> List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
+        | EventFilter.None exprs -> not ^ List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
         | EventFilter.Pattern (addressRexpr, traceRexpr) ->
             if addressRexpr.IsMatch addressStr then
                 let mutable passes = true
