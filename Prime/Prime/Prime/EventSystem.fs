@@ -87,8 +87,8 @@ module EventSystemModule =
             { Subscriptions : SubscriptionEntries
               Unsubscriptions : UnsubscriptionEntries
               EventStates : Vmap<Guid, obj>
-              EventLogger : string -> unit
-              EventLogging : bool
+              EventTracer : string -> unit
+              EventTracing : bool
               EventFilter : EventFilter }
 
     [<RequireQualifiedAccess>]
@@ -125,17 +125,17 @@ module EventSystemModule =
 
         /// Log an event.
         let logEvent<'w> (address : obj Address) (trace : EventTrace) (eventSystem : 'w EventSystem) =
-            if eventSystem.EventLogging then
+            if eventSystem.EventTracing then
                 let addressStr = scstring address
                 let traceRev = List.rev trace // for efficiency during normal execution, trace is cons'd up into a reversed list
                 if EventFilter.filter addressStr traceRev eventSystem.EventFilter then
-                    eventSystem.EventLogger ^ addressStr + "|" + scstring traceRev
+                    eventSystem.EventTracer ^ addressStr + "|" + scstring traceRev
 
         /// Make an event system.
-        let make eventLogger eventLogging eventFilter =
+        let make eventTracer eventTracing eventFilter =
             { Subscriptions = Vmap.makeEmpty ()
               Unsubscriptions = Vmap.makeEmpty ()
               EventStates = Vmap.makeEmpty ()
-              EventLogger = eventLogger
-              EventLogging = eventLogging
+              EventTracer = eventTracer
+              EventTracing = eventTracing
               EventFilter = eventFilter }

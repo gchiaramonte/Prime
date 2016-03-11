@@ -31,8 +31,8 @@ module EventTests =
                 Eventable.publishEvent<'a, 'p, TestParticipant, TestWorld> participant publisher eventData eventAddress eventTrace subscription world
         static member incTestState this =
             { this with TestState = inc this.TestState }
-        static member make eventLogger eventLogging eventFilter =
-            { TestState = 0; TestEventSystem = EventSystem.make eventLogger eventLogging eventFilter }
+        static member make eventTracer eventTracing eventFilter =
+            { TestState = 0; TestEventSystem = EventSystem.make eventTracer eventTracing eventFilter }
 
     let TestEvent = ntoa<int> !!"Int"
     let TestParticipant = { TestAddress = Address.empty<TestParticipant> }
