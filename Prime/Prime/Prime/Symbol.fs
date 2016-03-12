@@ -67,9 +67,9 @@ module Symbol =
     let readAtomAsString =
         parse {
             do! openStringForm
-            let! stringChars = readStringChars
+            let! escaped = readStringChars
             do! closeStringForm
-            return stringChars |> String.implode |> Atom }
+            return escaped |> String.implode |> String.unescape |> Atom }
 
     let readQuote =
         parse {
@@ -97,10 +97,12 @@ module Symbol =
             let isEmpty = Seq.isEmpty str
             let isExplicit = str.StartsWith "\"" && str.EndsWith "\""
             let shouldBeExplicit = Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
-            if isEmpty then OpenStringStr + CloseStringStr
-            elif isExplicit && not shouldBeExplicit then str.Substring (1, str.Length - 2)
-            elif not isExplicit && shouldBeExplicit then OpenStringStr + str + CloseStringStr
-            else str
+            let unescaped =
+                if isEmpty then OpenStringStr + CloseStringStr
+                elif isExplicit && not shouldBeExplicit then str.Substring (1, str.Length - 2)
+                elif not isExplicit && shouldBeExplicit then OpenStringStr + str + CloseStringStr
+                else str
+            String.escape unescaped
         | Quote str -> OpenQuoteStr + str + CloseQuoteStr
         | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
 

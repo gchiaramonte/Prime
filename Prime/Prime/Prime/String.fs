@@ -48,3 +48,43 @@ module String =
     /// Surround a string with another surrounding string.
     let surround (str : string) (surrounding : string) =
         surrounding + str + surrounding
+
+    /// Contract escaped characters in a string.
+    let unescape (str : string) =
+        str |>
+        Seq.fold (fun (escaped, chars) y ->
+            if escaped then
+                let chr = 
+                    match y with
+                    | '0' -> '\u0000'
+                    | '\"' -> '\"'
+                    | '\\' -> '\\'
+                    | 'a' -> '\a'
+                    | 'b' -> '\b'
+                    | 'f' -> '\u000c'
+                    | 'n' -> '\n'
+                    | 'r' -> '\r'
+                    | 't' -> '\t'
+                    | 'v' -> '\v'
+                    | c -> c
+                (false, chr :: chars)
+            elif y = '\\' then (true, chars)
+            else (false, y :: chars))
+            (false, []) |>
+        snd |>
+        implode
+
+    /// Expand escaped characters in a string.
+    let escape (str : string) =
+        // NOTE: doing escape character substitution in-place with a linked-list may prevent speed issues
+        str
+            .Replace("\\", "\\\\") // NOTE: this line must come first
+            .Replace("\u0000", "\\0")
+            .Replace("\"", "\\\"")
+            .Replace("\a", "\\a")
+            .Replace("\b", "\\b")
+            .Replace("\f", "\\f")
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r")
+            .Replace("\t", "\\t")
+            .Replace("\v", "\\v")
