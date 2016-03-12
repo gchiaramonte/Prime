@@ -260,7 +260,9 @@ type SymbolicConverter (targetType : Type) =
         elif destType = typeof<Symbol> then
             match source with
             | null -> Symbols [] :> obj
-            | _ -> toSymbol destType source :> obj
+            | _ ->
+                let sourceType = source.GetType ()
+                toSymbol sourceType source :> obj
         else
             let sourceType = source.GetType ()
             if destType = sourceType then source

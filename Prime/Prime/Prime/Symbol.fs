@@ -35,8 +35,8 @@ module Symbol =
     let [<Literal>] StructureCharsNoStr = "[]`\'"
     let [<Literal>] StructureChars = "\"" + StructureCharsNoStr
 
-    let isImplicit (str : string) =
-        not (str.StartsWith "\"" && str.EndsWith "\"")
+    let isExplicit (str : string) =
+        str.StartsWith "\"" && str.EndsWith "\""
     
     let shouldBeExplicit (str : string) =
         Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
@@ -101,7 +101,8 @@ module Symbol =
         match symbol with
         | Atom str ->
             if Seq.isEmpty str then OpenStringStr + CloseStringStr
-            elif isImplicit str && shouldBeExplicit str then OpenStringStr + str + CloseStringStr
+            elif not (isExplicit str) && shouldBeExplicit str then OpenStringStr + str + CloseStringStr
+            elif isExplicit str && not (shouldBeExplicit str) then str.Substring (1, str.Length - 2)
             else str
         | Quote str -> OpenQuoteStr + str + CloseQuoteStr
         | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
