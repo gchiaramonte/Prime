@@ -32,8 +32,14 @@ module Symbol =
     let [<Literal>] OpenQuoteStr = "`"
     let [<Literal>] CloseQuoteChar = '\''
     let [<Literal>] CloseQuoteStr = "\'"
-    let [<Literal>] StructureChars = "[]\"`\'"
-    let StructureCharsNoStr = (StructureChars.Replace (OpenStringStr, "")).Replace (CloseStringStr, "")
+    let [<Literal>] StructureCharsNoStr = "[]`\'"
+    let [<Literal>] StructureChars = "\"" + StructureCharsNoStr
+
+    let isImplicit (str : string) =
+        not (str.StartsWith "\"" && str.EndsWith "\"")
+    
+    let shouldBeExplicit (str : string) =
+        Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
 
     let skipWhitespace = skipAnyOf WhitespaceChars
     let skipWhitespaces = skipMany skipWhitespace
@@ -69,7 +75,7 @@ module Symbol =
             do! openStringForm
             let! escaped = readStringChars
             do! closeStringForm
-            return escaped |> String.implode |> String.unescape |> Atom }
+            return escaped |> String.implode |> Atom }
 
     let readQuote =
         parse {
@@ -94,15 +100,9 @@ module Symbol =
     let rec writeSymbol symbol =
         match symbol with
         | Atom str ->
-            let isEmpty = Seq.isEmpty str
-            let isExplicit = str.StartsWith "\"" && str.EndsWith "\""
-            let shouldBeExplicit = Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
-            let unescaped =
-                if isEmpty then OpenStringStr + CloseStringStr
-                elif isExplicit && not shouldBeExplicit then str.Substring (1, str.Length - 2)
-                elif not isExplicit && shouldBeExplicit then OpenStringStr + str + CloseStringStr
-                else str
-            String.escape unescaped
+            if Seq.isEmpty str then OpenStringStr + CloseStringStr
+            elif isImplicit str && shouldBeExplicit str then OpenStringStr + str + CloseStringStr
+            else str
         | Quote str -> OpenQuoteStr + str + CloseQuoteStr
         | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
 

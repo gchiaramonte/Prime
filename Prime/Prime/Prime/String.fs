@@ -51,28 +51,28 @@ module String =
 
     /// Contract escaped characters in a string.
     let unescape (str : string) =
-        str |>
-        Seq.fold (fun (escaped, chars) y ->
-            if escaped then
-                let chr = 
-                    match y with
-                    | '0' -> '\u0000'
-                    | '\"' -> '\"'
-                    | '\\' -> '\\'
-                    | 'a' -> '\a'
-                    | 'b' -> '\b'
-                    | 'f' -> '\u000c'
-                    | 'n' -> '\n'
-                    | 'r' -> '\r'
-                    | 't' -> '\t'
-                    | 'v' -> '\v'
-                    | c -> c
-                (false, chr :: chars)
-            elif y = '\\' then (true, chars)
-            else (false, y :: chars))
-            (false, []) |>
-        snd |>
-        implode
+        let unescaped =
+            Seq.foldBack (fun y (escaped, chars) ->
+                if escaped then
+                    let chr = 
+                        match y with
+                        | '0' -> '\u0000'
+                        | '\"' -> '\"'
+                        | '\\' -> '\\'
+                        | 'a' -> '\a'
+                        | 'b' -> '\b'
+                        | 'f' -> '\u000c'
+                        | 'n' -> '\n'
+                        | 'r' -> '\r'
+                        | 't' -> '\t'
+                        | 'v' -> '\v'
+                        | c -> c
+                    (false, chr :: chars)
+                elif y = '\\' then (true, chars)
+                else (false, y :: chars))
+                str 
+                (false, [])
+        unescaped |> snd |> implode
 
     /// Expand escaped characters in a string.
     let escape (str : string) =
