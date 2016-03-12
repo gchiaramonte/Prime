@@ -52,7 +52,7 @@ module String =
     /// Contract escaped characters in a string.
     let unescape (str : string) =
         let unescaped =
-            Seq.foldBack (fun y (escaped, chars) ->
+            Seq.fold (fun (escaped, chars) y ->
                 if escaped then
                     let chr = 
                         match y with
@@ -70,9 +70,9 @@ module String =
                     (false, chr :: chars)
                 elif y = '\\' then (true, chars)
                 else (false, y :: chars))
-                str 
                 (false, [])
-        unescaped |> snd |> implode
+                str 
+        unescaped |> snd |> List.rev |> implode
 
     /// Expand escaped characters in a string.
     let escape (str : string) =
