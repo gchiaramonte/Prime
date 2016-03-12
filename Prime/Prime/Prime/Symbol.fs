@@ -33,6 +33,7 @@ module Symbol =
     let [<Literal>] CloseQuoteChar = '\''
     let [<Literal>] CloseQuoteStr = "\'"
     let [<Literal>] StructureChars = "[]\"`\'"
+    let StructureCharsNoStr = (StructureChars.Replace (OpenStringStr, "")).Replace (CloseStringStr, "")
 
     let skipWhitespace = skipAnyOf WhitespaceChars
     let skipWhitespaces = skipMany skipWhitespace
@@ -93,8 +94,12 @@ module Symbol =
     let rec writeSymbol symbol =
         match symbol with
         | Atom str ->
-            if Seq.isEmpty str then OpenStringStr + str + CloseStringStr
-            elif Seq.exists Char.IsWhiteSpace str && not (str.StartsWith "\"" && str.EndsWith "\"") then OpenStringStr + str + CloseStringStr
+            let isEmpty = Seq.isEmpty str
+            let isExplicit = str.StartsWith "\"" && str.EndsWith "\""
+            let shouldBeExplicit = Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
+            if isEmpty then OpenStringStr + CloseStringStr
+            elif isExplicit && not shouldBeExplicit then str.Substring (1, str.Length - 2)
+            elif not isExplicit && shouldBeExplicit then OpenStringStr + str + CloseStringStr
             else str
         | Quote str -> OpenQuoteStr + str + CloseQuoteStr
         | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
