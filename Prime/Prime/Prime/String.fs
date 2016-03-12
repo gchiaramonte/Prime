@@ -26,10 +26,10 @@ module String =
 
     /// Textualize a string for usage as text.
     let textualize (str : string) =
-        let str = str.Replace ('_', ' ')
-        let str = str.Replace ("\"", "")
-        str
-    
+        if str.StartsWith "\"" && str.EndsWith "\""
+        then str.Substring (1, str.Length - 2)
+        else str
+
     /// Get the string with the given ending.
     let withEnd str target =
         let length = String.length str
