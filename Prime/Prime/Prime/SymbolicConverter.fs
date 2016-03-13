@@ -181,7 +181,7 @@ type SymbolicConverter (targetType : Type) =
                             let pairType = typedefof<Tuple<_, _>>.MakeGenericType [|fstType; sndType|]
                             let pairList = List.map (fromSymbol pairType) symbols
                             let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|pairType|]
-                            let ofSeq = ((typedefof<Vmap<_, _>>.Assembly.GetType "Prime.VmapModule").GetMethod ("ofSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|fstType; sndType|]
+                            let ofSeq = ((typedefof<Vmap<_, _>>.Assembly.GetType "Prime.VmapModule+Vmap").GetMethod ("ofSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|fstType; sndType|]
                             ofSeq.Invoke (null, [|cast.Invoke (null, [|pairList|])|])
                         | _ -> failwithumf ()
                     | _ -> failwith "Expected Symbols value for Vmap."
