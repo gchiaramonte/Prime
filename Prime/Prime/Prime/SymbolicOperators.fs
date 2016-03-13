@@ -10,7 +10,8 @@ module SymbolicOperators =
 
     /// Convert a value to a symbol.
     let symbolize<'a> (value : 'a) =
-        let converter = SymbolicConverter ^ getType value
+        let ty = if isNull (value :> obj) then typeof<'a> else getType value
+        let converter = SymbolicConverter ty
         converter.ConvertTo (value, typeof<Symbol>) :?> Symbol
 
     /// Convert a symbol to a value.
@@ -20,7 +21,8 @@ module SymbolicOperators =
 
     /// Uses a symbolic converter to convert a value to a string.
     let scstring<'a> (value : 'a) =
-        let converter = SymbolicConverter ^ getType value
+        let ty = if isNull (value :> obj) then typeof<'a> else getType value
+        let converter = SymbolicConverter ty
         converter.ConvertToString value
 
     /// Uses a symbolic converter to convert a string to a value.
