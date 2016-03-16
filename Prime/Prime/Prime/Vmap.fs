@@ -25,7 +25,7 @@ module internal VnodeModule =
     /// TODO: there's an F# issue where UseNullAsTrueValue does not work on unions with 4 or more cases
     /// https://github.com/Microsoft/visualfsharp/issues/711 . Once resolved, should use it and be able
     /// to make arrays with Array.zeroCreate alone without also copying over the empty array.
-    type internal Vnode<'k, 'v when 'k : comparison> =
+    type [<NoComparison>] internal Vnode<'k, 'v when 'k : comparison> =
         private
             | Nil
             | Singleton of Hkv<'k, 'v>
@@ -159,7 +159,7 @@ module VmapModule =
 
     /// A very fast persistent hash map.
     /// Works in effectively constant-time for look-ups and updates.
-    type [<NoEquality; NoComparison>] Vmap<'k, 'v when 'k : comparison> =
+    type [<NoComparison>] Vmap<'k, 'v when 'k : comparison> =
         private
             { Node : Vnode<'k, 'v>
               EmptyArray : Vnode<'k, 'v> array }
