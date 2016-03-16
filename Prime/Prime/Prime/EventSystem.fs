@@ -36,16 +36,16 @@ type ParticipantOperators =
     static member (->-) (address, participant : Participant) = ParticipantOperators.acatf address participant
 
 /// An event used by the event system.
-type [<ReferenceEquality>] Event<'a, 'p when 'p :> Participant> =
+type [<ReferenceEquality>] Event<'a, 's when 's :> Participant> =
     { Data : 'a
       Address : 'a Address
       Trace : EventTrace
       Publisher : Participant
-      Subscriber : 'p }
+      Subscriber : 's }
 
 /// Describes an event subscription.
-type Subscription<'a, 'p, 'w when 'p :> Participant> =
-    Event<'a, 'p> -> 'w -> Handling * 'w
+type Subscription<'a, 's, 'w when 's :> Participant> =
+    Event<'a, 's> -> 'w -> Handling * 'w
 
 /// An entry in the subscription map.
 type SubscriptionEntry =
