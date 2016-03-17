@@ -64,9 +64,9 @@ let rec tryFindPlus pred list =
     match list with
     | [] -> None
     | head :: tail ->
-        let (pass, value) = pred head
-        if pass then Some value
-        else tryFindPlus pred tail
+        match pred head with
+        | Some _ as someValue -> someValue
+        | None -> tryFindPlus pred tail
 
 /// Try to find a value at index n.
 let rec tryFindAt n list =

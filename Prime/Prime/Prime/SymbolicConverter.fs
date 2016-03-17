@@ -15,7 +15,7 @@ type SymbolicCompression<'a, 'b> =
     | SymbolicCompressionA of 'a
     | SymbolicCompressionB of 'b
 
-type SymbolicConverter (targetType : Type) =
+type SymbolicConverter (pointType : Type) =
     inherit TypeConverter ()
 
     // NOTE: had to do some reflection hacking get this assembly as it was the only way I could
@@ -244,43 +244,36 @@ type SymbolicConverter (targetType : Type) =
         let symbol = Symbol.fromString source
         fromSymbol destType symbol
 
-    override this.CanConvertTo (_, _) =
-        true
-    
+    override this.CanConvertTo (_, destType) =
+        destType = typeof<string> ||
+        destType = typeof<Symbol> ||
+        destType = pointType
+
     override this.ConvertTo (_, _, source, destType) =
         if destType = typeof<string> then
             match source with
             | null ->
-                if FSharpType.IsUnion targetType
-                then (FSharpType.GetUnionCases targetType).[0].Name :> obj
-                else String.Empty :> obj
-            | _ ->
-                let sourceType = source.GetType ()
-                toString sourceType source :> obj
-        elif destType = typeof<Symbol> then
-            match source with
-            | null -> Symbols [] :> obj
-            | _ ->
-                let sourceType = source.GetType ()
-                toSymbol sourceType source :> obj
-        else
-            let sourceType = source.GetType ()
-            if destType = sourceType then source
-            else failwith "Invalid SymbolicConverter conversion to source."
+                if FSharpType.IsUnion pointType
+                then (FSharpType.GetUnionCases pointType).[0].Name :> obj
+                else toString pointType source :> obj
+            | _ -> toString pointType source :> obj
+        elif destType = typeof<Symbol> then toSymbol pointType source :> obj
+        elif destType = pointType then source
+        else failwith "Invalid SymbolicConverter conversion to source."
 
     override this.CanConvertFrom (_, sourceType) =
         sourceType = typeof<string> ||
         sourceType = typeof<Symbol> ||
-        sourceType = targetType
+        sourceType = pointType
 
     override this.ConvertFrom (_, _, source) =
         match source with
         | null -> source
         | _ ->
             let sourceType = source.GetType ()
-            if sourceType <> targetType then
+            if sourceType <> pointType then
                 match source with
-                | :? string as sourceStr -> fromString targetType sourceStr
-                | :? Symbol as sourceSymbol -> fromSymbol targetType sourceSymbol
+                | :? string as sourceStr -> fromString pointType sourceStr
+                | :? Symbol as sourceSymbol -> fromSymbol pointType sourceSymbol
                 | _ -> failwith "Invalid SymbolicConverter conversion from string."
             else source
