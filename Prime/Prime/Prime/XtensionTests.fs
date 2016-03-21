@@ -4,7 +4,6 @@
 namespace Prime.Tests
 open System
 open System.IO
-open System.Xml
 open Xunit
 open Prime
 
