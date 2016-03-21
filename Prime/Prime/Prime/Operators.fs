@@ -55,6 +55,12 @@ module Operators =
     /// Test for non-null.
     let inline isNotNull x = match x with null -> false | _ -> true
 
+    /// Test that the given type has null as an actual value.
+    let isNullTrueValue (ty : Type) =
+        ty.GetCustomAttributes(typeof<CompilationRepresentationAttribute>, true) |>
+        Array.map (fun (attr : obj) -> attr :?> CompilationRepresentationAttribute) |>
+        Array.exists (fun attr -> int attr.Flags &&& int CompilationRepresentationFlags.UseNullAsTrueValue <> 0)
+
     /// Convert a nullable value into an option.
     let inline denull x = match x with null -> None | _ -> Some x
 

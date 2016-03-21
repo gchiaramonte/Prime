@@ -47,7 +47,7 @@ type SymbolicConverter (pointType : Type) =
             else typeConverter.ConvertTo (source, typeof<Symbol>) :?> Symbol
         | None ->
             if sourceType.IsPrimitive then
-                (TypeDescriptor.GetConverter sourceType).ConvertToString source |> Atom
+                (TypeDescriptor.GetConverter sourceType).ConvertTo (source, typeof<string>) :?> string |> Atom
             elif sourceType = typeof<string> then
                 source :?> string |> Atom
             elif sourceType = typeof<Symbol> then
@@ -112,7 +112,7 @@ type SymbolicConverter (pointType : Type) =
                 let typeConverter = TypeDescriptor.GetConverter sourceType
                 if typeConverter.CanConvertTo typeof<Symbol>
                 then typeConverter.ConvertTo (source, typeof<Symbol>) :?> Symbol
-                else typeConverter.ConvertToString source |> Atom
+                else typeConverter.ConvertTo (source, typeof<string>) :?> string |> Atom
 
     let toString (sourceType : Type) (source : obj) =
         let symbol = toSymbol sourceType source
