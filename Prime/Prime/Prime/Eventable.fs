@@ -81,6 +81,20 @@ module Eventable =
                 anyEventAddresses
         else failwith "Event name cannot be empty."
 
+    let private boxSubscription<'a, 's, 'w when 's :> Participant and 'w :> 'w Eventable> (subscription : Subscription<'a, 's, 'w>) =
+        let boxableSubscription = fun (evt : obj) world ->
+            try subscription (evt :?> Event<'a, 's>) world
+            with
+            | :? InvalidCastException ->
+                Log.debug ^
+                    "If you've reached this exception, then you've probably inadvertantly mixed up an event type " +
+                    "parameter for some form of Eventable.publish or subscribe. " +
+                    "This exception can also crop up when your implementation of Eventable.PublishEvent doesn't " +
+                    "correctly specialize its 's and 'w types for Eventable.publishEvent calls."
+                reraise ()
+            | _ -> reraise ()
+        box boxableSubscription
+
     let getSortableSubscriptions
         (getEntityPublishingPriority : Participant -> 'w -> single) (subscriptions : SubscriptionEntry list) (world : 'w) :
         (single * SubscriptionEntry) list =
@@ -108,20 +122,6 @@ module Eventable =
         let subLists = List.definitize optSubLists
         let subList = List.concat subLists
         publishSorter subList world
-
-    let boxSubscription<'a, 's, 'w when 's :> Participant and 'w :> 'w Eventable> (subscription : Subscription<'a, 's, 'w>) =
-        let boxableSubscription = fun (evt : obj) world ->
-            try subscription (evt :?> Event<'a, 's>) world
-            with
-            | :? InvalidCastException ->
-                Log.debug ^
-                    "If you've reached this exception, then you've probably inadvertantly mixed up an event type " +
-                    "parameter for some form of Eventable.publish or subscribe. " +
-                    "This exception can also crop up when your implementation of Eventable.PublishEvent doesn't " +
-                    "correctly specialize its 's and 'w types for Eventable.publishEvent calls."
-                reraise ()
-            | _ -> reraise ()
-        box boxableSubscription
 
     let logEvent<'w when 'w :> 'w Eventable> eventAddress eventTrace (world : 'w) =
         EventSystem.logEvent<'w> eventAddress eventTrace (getEventSystem world)
