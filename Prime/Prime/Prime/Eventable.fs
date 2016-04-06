@@ -61,8 +61,23 @@ module Eventable =
 
     /// Get event state from the world.
     let getEventState<'a, 'w when 'w :> 'w Eventable> key (world : 'w) : 'a =
-        let eventSystem = getEventSystem world
-        EventSystem.getEventState<'a, 'w> key eventSystem
+        getEventSystemBy (EventSystem.getEventState<'a, 'w> key) world
+
+    /// Get whether events are being traced.
+    let getEventTracing<'w when 'w :> 'w Eventable> (world : 'w) =
+        getEventSystemBy (EventSystem.getEventTracing<'w>) world
+
+    /// Set whether events are being traced.
+    let setEventTracing<'w when 'w :> 'w Eventable> tracing (world : 'w) =
+        updateEventSystem (EventSystem.setEventTracing tracing) world
+
+    /// Get the state of the event filter.
+    let getEventFilter<'w when 'w :> 'w Eventable> (world : 'w) =
+        getEventSystemBy (EventSystem.getEventFilter) world
+
+    /// Set the state of the event filter.
+    let setEventFilter<'w when 'w :> 'w Eventable> filter (world : 'w) =
+        updateEventSystem (EventSystem.setEventFilter filter) world
 
     let private getAnyEventAddresses eventAddress =
         // OPTIMIZATION: uses memoization.

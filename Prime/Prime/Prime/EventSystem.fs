@@ -123,6 +123,22 @@ module EventSystemModule =
             let state = Vmap.find key eventSystem.EventStates
             state :?> 'a
 
+        /// Get whether events are being traced.
+        let getEventTracing<'w> (eventSystem : 'w EventSystem) =
+            eventSystem.EventTracing
+
+        /// Set whether events are being traced.
+        let setEventTracing<'w> tracing (eventSystem : 'w EventSystem) =
+            { eventSystem with EventTracing = tracing }
+
+        /// Get the state of the event filter.
+        let getEventFilter<'w> (eventSystem : 'w EventSystem) =
+            eventSystem.EventFilter
+
+        /// Set the state of the event filter.
+        let setEventFilter<'w> filter (eventSystem : 'w EventSystem) =
+            { eventSystem with EventFilter = filter }
+
         /// Log an event.
         let logEvent<'w> (address : obj Address) (trace : EventTrace) (eventSystem : 'w EventSystem) =
             if eventSystem.EventTracing then
