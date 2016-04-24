@@ -112,7 +112,7 @@ module Symbol =
     /// (* Atom values *)
     /// 
     /// 0
-    /// Empty
+    /// None
     /// Hello_World
     /// CharacterAnimationFacing
     /// "String with quoted spaces."
@@ -138,7 +138,7 @@ module Symbol =
     /// (* Atom values *)
     /// 
     /// 0
-    /// Empty
+    /// None
     /// Hello_World
     /// CharacterAnimationFacing
     /// "String with quoted spaces."
