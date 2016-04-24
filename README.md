@@ -3,7 +3,8 @@ The Prime F# Code Library [![License](https://img.shields.io/badge/license-MIT-b
 
 ## Features
 
-- A serialization system based on symbolic expressions with **SymbolicConverter** and related types.
+- A metaprogramming system based on symbolic expressions with **Symbol** and **SymbolicConverter** types.
+- A generalized serialization system based on the above and related types.
 - A purely functional, publisher-neutral event system with **EventSystem** and related types.
 - The functional-reactive **Observation** arrow and **Chain** monad for said event system.
 - A purely functional dynamic property system called **Xtension**.
