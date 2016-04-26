@@ -19,29 +19,29 @@ type [<CLIMutable; NoEquality; NoComparison>] TestXtended =
 
 module XtensionTests =
 
-    let [<Fact>] canAddField () =
+    let [<Fact>] canAddProperty () =
         let xtn = Xtension.empty
-        let xtn = xtn?TestField <- 5
-        let fieldValue = xtn?TestField
-        Assert.Equal (5, fieldValue)
+        let xtn = xtn?TestProperty <- 5
+        let propertyValue = xtn?TestProperty
+        Assert.Equal (5, propertyValue)
 
-    let [<Fact>] cantAddFieldWhenSealed () =
+    let [<Fact>] cantAddPropertyWhenSealed () =
         let xtn = Xtension.safe
-        Assert.Throws<Exception> (fun () -> (xtn?TestField <- 0) |> ignore)
+        Assert.Throws<Exception> (fun () -> (xtn?TestProperty <- 0) |> ignore)
 
-    let [<Fact>] cantAccessNonexistentField () =
+    let [<Fact>] cantAccessNonexistentProperty () =
         let xtn = Xtension.mixed
-        let xtn = xtn?TestField <- 5
-        Assert.Throws<Exception> (fun () -> xtn?TetField |> ignore)
+        let xtn = xtn?TestProperty <- 5
+        Assert.Throws<Exception> (fun () -> xtn?TetProperty |> ignore)
 
-    let [<Fact>] missingFieldReturnsDefault () =
+    let [<Fact>] missingPropertyReturnsDefault () =
         let xtn = Xtension.empty
-        let xtn = xtn?TestField <- 0
-        let fieldValue = xtn?MissingField
-        Assert.Equal (0, fieldValue)
+        let xtn = xtn?TestProperty <- 0
+        let propertyValue = xtn?MissingProperty
+        Assert.Equal (0, propertyValue)
 
-    let [<Fact>] canAddFieldViaContainingType () =
+    let [<Fact>] canAddPropertyViaContainingType () =
         let xtd = { Xtension = Xtension.empty }
-        let xtd = xtd?TestField <- 5
-        let fieldValue = xtd?TestField
-        Assert.Equal (5, fieldValue)
+        let xtd = xtd?TestProperty <- 5
+        let propertyValue = xtd?TestProperty
+        Assert.Equal (5, propertyValue)

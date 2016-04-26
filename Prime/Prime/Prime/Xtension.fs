@@ -7,41 +7,41 @@ open System.Reflection
 open System.ComponentModel
 open Prime
 
-/// An attribute to specify the default value of an XField.
+/// An attribute to specify the default value of an XProperty.
 [<AttributeUsage (AttributeTargets.Class)>]
 type XDefaultValueAttribute (defaultValue : obj) =
     inherit Attribute ()
     member this.DefaultValue = defaultValue
     
-/// Describes an XField.
-type [<StructuralEquality; NoComparison>] XFieldDescriptor =
-    { FieldName : string
-      FieldType : Type }
+/// Describes an XProperty.
+type [<StructuralEquality; NoComparison>] XPropertyDescriptor =
+    { PropertyName : string
+      PropertyType : Type }
 
-/// An Xtension field.
-type [<StructuralEquality; NoComparison>] XField =
-    { FieldValue : obj
-      FieldType : Type }
+/// An Xtension property.
+type [<StructuralEquality; NoComparison>] XProperty =
+    { PropertyValue : obj
+      PropertyType : Type }
 
-/// A map of XFields.
-type XFields = Vmap<string, XField>
+/// A map of XProperties.
+type XProperties = Vmap<string, XProperty>
 
 [<AutoOpen>]
 module XtensionModule =
 
     /// Xtensions (and their supporting types) are a dynamic, functional, and semi-convenient way
-    /// to implement dynamic fields.
+    /// to implement dynamic properties.
     type [<NoEquality; NoComparison>] Xtension =
         private
-            { Fields : XFields
+            { Properties : XProperties
               CanDefault : bool
               Sealed : bool }
 
         /// Get the default value of an instance of type 'r taking into account XDefaultValue decorations.
         static member private getDefaultValue () : 'r =
-            let defaultFieldType = typeof<'r>
+            let defaultPropertyType = typeof<'r>
             let optDefaultValueAttribute =
-                defaultFieldType.GetCustomAttributes (typeof<XDefaultValueAttribute>, true) |>
+                defaultPropertyType.GetCustomAttributes (typeof<XDefaultValueAttribute>, true) |>
                 Seq.map (fun attr -> attr :?> XDefaultValueAttribute) |>
                 Seq.tryHead
             match optDefaultValueAttribute with
@@ -51,52 +51,52 @@ module XtensionModule =
                 | _ as defaultValue ->
                     let defaultValueType = defaultValue.GetType ()
                     let converter = SymbolicConverter defaultValueType
-                    if converter.CanConvertFrom defaultFieldType
+                    if converter.CanConvertFrom defaultPropertyType
                     then converter.ConvertFrom defaultValue :?> 'r
-                    else failwith ^ "Cannot convert '" + scstring defaultValue + "' to type '" + defaultFieldType.Name + "'."
+                    else failwith ^ "Cannot convert '" + scstring defaultValue + "' to type '" + defaultPropertyType.Name + "'."
             | None -> Unchecked.defaultof<'r>
 
         /// Try to get the default value for a given xtension member, returning None when defaulting is disallowed.
         static member private tryGetDefaultValue (this : Xtension) memberName : 'r =
             if this.CanDefault then Xtension.getDefaultValue ()
-            else failwith ^ "Xtension field '" + memberName + "' does not exist and no default is permitted because CanDefault is false."
+            else failwith ^ "Xtension property '" + memberName + "' does not exist and no default is permitted because CanDefault is false."
 
         /// The dynamic look-up operator for an Xtension.
         /// Example:
         ///     let parallax = entity?Parallax : single
         static member (?) (xtension, memberName) : 'r =
 
-            // check if dynamic member is an existing field
-            match Vmap.tryFind memberName xtension.Fields with
-            | Some field ->
+            // check if dynamic member is an existing property
+            match Vmap.tryFind memberName xtension.Properties with
+            | Some property ->
                 
-                // return field directly if the return type matches, otherwise the default value for that type
-                match field.FieldValue with
-                | :? 'r as fieldValue -> fieldValue
-                | _ -> failwith ^ "Xtension field '" + memberName + "' of type '" + field.FieldType.Name + "' is not of the expected type '" + typeof<'r>.Name + "'."
+                // return property directly if the return type matches, otherwise the default value for that type
+                match property.PropertyValue with
+                | :? 'r as propertyValue -> propertyValue
+                | _ -> failwith ^ "Xtension property '" + memberName + "' of type '" + property.PropertyType.Name + "' is not of the expected type '" + typeof<'r>.Name + "'."
 
             | None ->
 
-                // presume we're looking for a field that doesn't exist, so try to get the default value
+                // presume we're looking for a property that doesn't exist, so try to get the default value
                 Xtension.tryGetDefaultValue xtension memberName
 
         /// The dynamic assignment operator for an Xtension.
         /// Example:
         ///     let entity = entity.Position <- Vector2 (4.0, 5.0).
-        static member (?<-) (xtension, fieldName, value : 'a) =
+        static member (?<-) (xtension, propertyName, value : 'a) =
             // TODO: consider writing a 'Map.addDidContainKey' function to efficently add and return a
             // result that the key was already contained.
-            if xtension.Sealed && not ^ Vmap.containsKey fieldName xtension.Fields
-            then failwith "Cannot add field to a sealed Xtension."
+            if xtension.Sealed && not ^ Vmap.containsKey propertyName xtension.Properties
+            then failwith "Cannot add property to a sealed Xtension."
             else
-                let fields = Vmap.add fieldName { FieldValue = value :> obj; FieldType = typeof<'a> } xtension.Fields
-                { xtension with Fields = fields }
+                let properties = Vmap.add propertyName { PropertyValue = value :> obj; PropertyType = typeof<'a> } xtension.Properties
+                { xtension with Properties = properties }
 
     [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
     module Xtension =
     
         /// Make an extension with custom safety.
-        let make fields canDefault isSealed = { Fields = fields; CanDefault = canDefault; Sealed = isSealed }
+        let make properties canDefault isSealed = { Properties = properties; CanDefault = canDefault; Sealed = isSealed }
     
         /// An Xtension that can default and isn't sealed.
         let empty = make (Vmap.makeEmpty ()) true false
@@ -107,26 +107,26 @@ module XtensionModule =
         /// An Xtension that cannot default and isn't sealed.
         let mixed = make (Vmap.makeEmpty ()) false false
     
-        /// Get a field from an xtension.
-        let getField name xtension = Vmap.find name xtension.Fields
+        /// Get a property from an xtension.
+        let getProperty name xtension = Vmap.find name xtension.Properties
     
-        /// Try to get a field from an xtension.
-        let tryGetField name xtension = Vmap.tryFind name xtension.Fields
+        /// Try to get a property from an xtension.
+        let tryGetProperty name xtension = Vmap.tryFind name xtension.Properties
     
-        /// Attach a field to an Xtension.
-        let attachField name field xtension = { xtension with Fields = Vmap.add name field xtension.Fields }
+        /// Attach a property to an Xtension.
+        let attachProperty name property xtension = { xtension with Properties = Vmap.add name property xtension.Properties }
     
-        /// Attach multiple fields to an Xtension.
-        let attachFields namesAndFields xtension = { xtension with Fields = Vmap.addMany namesAndFields xtension.Fields }
+        /// Attach multiple properties to an Xtension.
+        let attachProperties namesAndProperties xtension = { xtension with Properties = Vmap.addMany namesAndProperties xtension.Properties }
     
-        /// Detach a field from an Xtension.
-        let detachField name xtension = { xtension with Fields = Vmap.remove name xtension.Fields }
+        /// Detach a property from an Xtension.
+        let detachProperty name xtension = { xtension with Properties = Vmap.remove name xtension.Properties }
     
-        /// Detach multiple fields from an Xtension.
-        let detachFields names xtension = { xtension with Fields = Vmap.removeMany names xtension.Fields }
-    
-        /// Convert an xtension to a sequence of its entries.
-        let toSeq xtension = xtension.Fields :> _ seq
+        /// Detach multiple properties from an Xtension.
+        let detachProperties names xtension = { xtension with Properties = Vmap.removeMany names xtension.Properties }
     
         /// Convert an xtension to a sequence of its entries.
-        let ofSeq seq = attachFields seq empty
+        let toSeq xtension = xtension.Properties :> _ seq
+    
+        /// Convert an xtension to a sequence of its entries.
+        let ofSeq seq = attachProperties seq empty
