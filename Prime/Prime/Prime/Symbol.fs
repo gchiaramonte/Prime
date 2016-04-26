@@ -113,7 +113,6 @@ module Symbol =
     /// 
     /// 0
     /// None
-    /// [2 2]
     /// Hello_World
     /// CharacterAnimationFacing
     /// "String with quoted spaces."
@@ -140,7 +139,6 @@ module Symbol =
     /// 
     /// 0
     /// None
-    /// [2 2]
     /// Hello_World
     /// CharacterAnimationFacing
     /// "String with quoted spaces."
