@@ -17,27 +17,31 @@ module MutantCacheModule =
 
     [<RequireQualifiedAccess>]
     module MutantCache =
-    
+
         let mutable private GlobalMutantRebuilds = 0L
-    
+        let private GlobalMutantRebuildsLock = obj ()
+
         let private rebuildCache (rebuildMutant : unit -> 'm) (mutantCache : 'm MutantCache)=
 #if DEBUG
-            GlobalMutantRebuilds <- GlobalMutantRebuilds + 1L
+            lock GlobalCacheTrackingLock (fun () -> GlobalCacheMisses <- GlobalCacheMisses + 1L)
 #endif
             let validMutant = rebuildMutant ()
             mutantCache.OptValidMutant <- None
             let mutantCache = { mutantCache with OptValidMutant = Some validMutant }
             (validMutant, mutantCache)
-    
+
         let private getMutantUncloned rebuildMutant (mutantCache : 'm MutantCache) =
             match mutantCache.OptValidMutant with
             | Some mutant -> (mutant, mutantCache)
             | None -> rebuildCache rebuildMutant mutantCache
-    
+
         /// The number of mutant rebuilds that have occured when using this type.
         /// Useful for performance trouble-shooting in Debug mode.
-        let getGlobalMutantRebuilds () = GlobalMutantRebuilds
-    
+        let getGlobalMutantRebuilds () =
+            let mutable result = 0L
+            lock GlobalMutantRebuildsLock (fun () -> result <- GlobalMutantRebuilds)
+            result
+
         /// <summary>Get the underlying mutant (mutable object / record / whatever).</summary>
         /// <param name="rebuildMutant">A function that rebuilds the mutant from scratch in case the current underlying mutant is out of date.</param>
         /// <param name="mutantCache">The mutant cache.</param>
@@ -45,7 +49,7 @@ module MutantCacheModule =
             let (mutantUncloned, mutantCache) = getMutantUncloned rebuildMutant mutantCache
             let mutantCloned = mutantCache.CloneMutant mutantUncloned
             (mutantCloned, mutantCache)
-    
+
         /// <summary>Mutate the underlying mutant (mutable object / record / whatever).</summary>
         /// <param name="rebuildMutant">A function that rebuilds the mutant from scratch in case the current underlying mutant is out of date.</param>
         /// <param name="mutateMutant">A function that mutates the underlying mutant.</param>
@@ -55,7 +59,7 @@ module MutantCacheModule =
             mutantCache.OptValidMutant <- None
             let mutant = mutateMutant mutant
             { mutantCache with OptValidMutant = Some mutant }
-    
+
         /// <summary>Make a mutant cache.</summary>
         /// <param name="cloneMutant">
         /// A function to clone the mutant before presenting it to the outside world.

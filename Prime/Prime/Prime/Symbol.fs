@@ -36,7 +36,7 @@ module Symbol =
     let [<Literal>] StructureChars = "\"" + StructureCharsNoStr
 
     let isExplicit (str : string) =
-        str.StartsWith "\"" && str.EndsWith "\""
+        str.StartsWith OpenStringStr && str.EndsWith CloseStringStr
     
     let shouldBeExplicit (str : string) =
         Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
@@ -87,9 +87,9 @@ module Symbol =
     let readSymbols =
         parse {
             do! openSymbolsForm
-            let! values = many readSymbol
+            let! symbols = many readSymbol
             do! closeSymbolsForm
-            return values |> Symbols }
+            return symbols |> Symbols }
 
     do refReadSymbol :=
         attempt readAtomAsString <|>

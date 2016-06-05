@@ -18,18 +18,25 @@ module KeyedCacheModule =
 
     [<RequireQualifiedAccess>]
     module KeyedCache =
-    
+
         let mutable private GlobalCacheHits = 0L
         let mutable private GlobalCacheMisses = 0L
-    
+        let private GlobalCacheTrackingLock = obj ()
+
         /// The number of cache hits that have occured when using this type.
         /// Useful for performance trouble-shooting in Debug mode.
-        let getGlobalCacheHits () = GlobalCacheHits
-    
+        let getGlobalCacheHits () =
+            let mutable result = 0L
+            lock GlobalCacheTrackingLock (fun () -> result <- GlobalCacheHits)
+            result
+
         /// The number of cache misses that have occured when using this type.
         /// Useful for performance trouble-shooting in Debug mode.
-        let getGlobalCacheMisses () = GlobalCacheMisses
-    
+        let getGlobalCacheMisses () =
+            let mutable result = 0L
+            lock GlobalCacheTrackingLock (fun () -> result <- GlobalCacheMisses)
+            result
+
         /// <summary>Get the cached value.</summary>
         /// <param name="keyEquality">Determines the equality of the key used to consider if the cache is valid.</param>
         /// <param name="getFreshKeyAndValue">Generates a fresh key and corresponding value to cache.</param>
@@ -38,7 +45,7 @@ module KeyedCacheModule =
         let getValue (keyEquality : 'k -> 'k -> bool) getFreshKeyAndValue cacheKey keyedCache : 'v =
             if not ^ keyEquality keyedCache.CacheKey cacheKey then
 #if DEBUG
-                GlobalCacheMisses <- GlobalCacheMisses + 1L
+                lock GlobalCacheTrackingLock (fun () -> GlobalCacheMisses <- GlobalCacheMisses + 1L)
 #endif
                 let (freshKey, freshValue) = getFreshKeyAndValue ()
                 keyedCache.CacheKey <- freshKey
@@ -49,7 +56,7 @@ module KeyedCacheModule =
                 GlobalCacheHits <- GlobalCacheHits + 1L
 #endif
                 keyedCache.CacheValue
-    
+
         /// <summary>Make a keyed cache value.</summary>
         /// <param name="cacheKey">The current key against which to validate the cache.</param>
         /// <param name="cacheValue">The value associated with the cache key.</param>
