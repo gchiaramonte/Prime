@@ -19,22 +19,28 @@ module KeyedCacheModule =
     [<RequireQualifiedAccess>]
     module KeyedCache =
 
+#if DEBUG
         let mutable private GlobalCacheHits = 0L
         let mutable private GlobalCacheMisses = 0L
         let private GlobalCacheTrackingLock = obj ()
+#endif
 
         /// The number of cache hits that have occured when using this type.
         /// Useful for performance trouble-shooting in Debug mode.
         let getGlobalCacheHits () =
             let mutable result = 0L
+#if DEBUG
             lock GlobalCacheTrackingLock (fun () -> result <- GlobalCacheHits)
+#endif
             result
 
         /// The number of cache misses that have occured when using this type.
         /// Useful for performance trouble-shooting in Debug mode.
         let getGlobalCacheMisses () =
             let mutable result = 0L
+#if DEBUG
             lock GlobalCacheTrackingLock (fun () -> result <- GlobalCacheMisses)
+#endif
             result
 
         /// <summary>Get the cached value.</summary>

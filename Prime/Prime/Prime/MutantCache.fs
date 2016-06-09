@@ -18,12 +18,14 @@ module MutantCacheModule =
     [<RequireQualifiedAccess>]
     module MutantCache =
 
+#if DEBUG
         let mutable private GlobalMutantRebuilds = 0L
         let private GlobalMutantRebuildsLock = obj ()
+#endif
 
         let private rebuildCache (rebuildMutant : unit -> 'm) (mutantCache : 'm MutantCache)=
 #if DEBUG
-            lock GlobalCacheTrackingLock (fun () -> GlobalCacheMisses <- GlobalCacheMisses + 1L)
+            lock GlobalMutantRebuildsLock (fun () -> GlobalMutantRebuilds <- GlobalMutantRebuilds + 1L)
 #endif
             let validMutant = rebuildMutant ()
             mutantCache.OptValidMutant <- None
@@ -39,7 +41,9 @@ module MutantCacheModule =
         /// Useful for performance trouble-shooting in Debug mode.
         let getGlobalMutantRebuilds () =
             let mutable result = 0L
+#if DEBUG
             lock GlobalMutantRebuildsLock (fun () -> result <- GlobalMutantRebuilds)
+#endif
             result
 
         /// <summary>Get the underlying mutant (mutable object / record / whatever).</summary>
