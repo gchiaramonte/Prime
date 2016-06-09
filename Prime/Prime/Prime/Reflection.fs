@@ -6,6 +6,7 @@ open System
 open System.ComponentModel
 open System.Reflection
 open System.IO
+open Microsoft.FSharp.Reflection
 
 /// Along with the Label binding, is used to elaborate the name of a target without using a
 /// string literal.
@@ -64,6 +65,24 @@ module TypeExtension =
 
     /// Type extension for Type.
     type Type with
+
+        /// Get the default value for a type.
+        /// Never returns null.
+        member this.GetDefaultValue () =
+            if this.IsPrimitive then Activator.CreateInstance this
+            elif this = typeof<string> then "" :> obj
+            elif this.Name = typedefof<_ array>.Name then Array.empty :> obj
+            elif this.Name = typedefof<_ list>.Name then List.empty :> obj
+            elif this.Name = typedefof<_ Set>.Name then Set.empty :> obj
+            elif this.Name = typedefof<Map<_, _>>.Name then Map.empty :> obj
+            elif this.Name = typedefof<Vmap<_, _>>.Name then Vmap.makeEmpty () :> obj
+            elif FSharpType.IsUnion this then
+                let unionCases = FSharpType.GetUnionCases this
+                if (unionCases.[0].GetFields ()).Length = 0
+                then FSharpValue.MakeUnion (unionCases.[0], [||])
+                else failwithumf ()
+            elif isNotNull ^ this.GetConstructor [||] then Activator.CreateInstance ()
+            else failwithumf ()
 
         /// Get the type descriptor for this type as returned by the global TypeDescriptor.
         member this.GetTypeDescriptor () =

@@ -149,11 +149,15 @@ let allOrEmptyBy by list =
     let definites = List.choose (fun item -> by item) list
     if areSameLength definites list then definites else []
 
+/// Pad a list with count instances of its last item, removing items from back if count is negative.
+let pad count elem list =
+    if count = 0 then list
+    elif count > 0 then list @ List.init count (fun _ -> elem)
+    else List.take (List.length list + count) list
+
 /// Pad a list with count instances of its last item.
 let padWithLast count list =
-    let lastElem = List.last list
-    let padding = List.init count (fun _ -> lastElem)
-    list @ padding
+    pad count (List.last list) list
 
 /// Pad a list with instances of its last item so that it is proportion to another list.
 let padWithLastToProportion list list2 =

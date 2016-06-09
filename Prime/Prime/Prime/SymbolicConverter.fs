@@ -39,47 +39,99 @@ type SymbolicConverter (pointType : Type) =
         let iEnumerable = source :?> IEnumerable
         Set.ofSeq ^ enumerable<IComparable> iEnumerable
 
+    let defaultify (fieldType : obj) (optValue : obj) =
+        match optValue with
+        | null -> optValue
+        | _ -> let fieldType = fieldType :?> PropertyInfo in fieldType.PropertyType.GetDefaultValue ()
+        
+    let padWithDefaults (fieldTypes : PropertyInfo array) (values : obj list) =
+        let valuesLength = List.length values
+        if fieldTypes.Length = valuesLength then Array.ofList values
+        else
+            let values = List.pad (fieldTypes.Length - valuesLength) null values
+            (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify |> Array.ofSeq
+
+    let defaultify' (fieldType : obj) (optValue : obj) =
+        match optValue with
+        | null -> optValue
+        | _ -> let fieldType = fieldType :?> Type in fieldType.GetDefaultValue ()
+
+    let padWithDefaults' (fieldTypes : Type array) (values : obj list) =
+        let valuesLength = List.length values
+        if fieldTypes.Length = valuesLength then Array.ofList values
+        else
+            let values = List.pad (fieldTypes.Length - valuesLength) null values
+            (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify' |> Array.ofSeq
+
     let rec toSymbol (sourceType : Type) (source : obj) =
         match sourceType.TryGetCustomTypeConverter () with
         | Some typeConverter ->
+
+            // symbolize user-defined type
             if not ^ typeConverter.CanConvertTo typeof<Symbol>
             then failwith ^ "Cannot convert type '" + getTypeName source + "' to Prime.Symbol."
             else typeConverter.ConvertTo (source, typeof<Symbol>) :?> Symbol
+        
         | None ->
+
+            // symbolize .NET primitive
             if sourceType.IsPrimitive then
                 (TypeDescriptor.GetConverter sourceType).ConvertTo (source, typeof<string>) :?> string |> Atom
+
+            // symbolize string
             elif sourceType = typeof<string> then
                 source :?> string |> Atom
+
+            // symbolize Symbol (no transformation)
             elif sourceType = typeof<Symbol> then
                 source :?> Symbol
+
+            // symbolize KeyValuePair
             elif sourceType.Name = typedefof<KeyValuePair<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let kvp = objToKeyValuePair source
                 let keySymbol = toSymbol gargs.[0] kvp.Key
                 let valueSymbol = toSymbol gargs.[1] kvp.Value
                 Symbols [keySymbol; valueSymbol]
+
+            // symbolize array
+            elif sourceType.Name = typedefof<_ array>.Name then
+                let gargs = sourceType.GetGenericArguments ()
+                let items = objToObjList source
+                let symbols = List.map (toSymbol gargs.[0]) items
+                Symbols symbols
+
+            // symbolize list
             elif sourceType.Name = typedefof<_ list>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let items = objToObjList source
                 let symbols = List.map (toSymbol gargs.[0]) items
                 Symbols symbols
+
+            // symbolize Set
             elif sourceType.Name = typedefof<_ Set>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let items = objToComparableSet source |> List.ofSeq
                 let symbols = List.map (toSymbol gargs.[0]) items
                 Symbols symbols
+
+            // symbolize Map
             elif sourceType.Name = typedefof<Map<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let itemType = typedefof<KeyValuePair<_, _>>.MakeGenericType [|gargs.[0]; gargs.[1]|]
                 let items = objToObjList source
                 let symbols = List.map (toSymbol itemType) items
                 Symbols symbols
+
+            // symbolize Vmap
             elif sourceType.Name = typedefof<Vmap<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let itemType = typedefof<Tuple<_, _>>.MakeGenericType [|gargs.[0]; gargs.[1]|]
                 let items = objToObjList source
                 let symbols = List.map (toSymbol itemType) items
                 Symbols symbols
+
+            // symbolize SymbolicCompression
             elif sourceType.Name = typedefof<SymbolicCompression<_, _>>.Name then
                 let (unionCase, unionFields) = FSharpValue.GetUnionFields (source, sourceType)
                 let value = unionFields.[0]
@@ -90,16 +142,22 @@ type SymbolicConverter (pointType : Type) =
                     let value = unionFields.[0]
                     let valueType = value.GetType ()
                     toSymbol valueType value
+
+            // symbolize Tuple
             elif FSharpType.IsTuple sourceType then
                 let tupleFields = FSharpValue.GetTupleFields source
                 let tupleElementTypes = FSharpType.GetTupleElements sourceType
                 let tupleFieldSymbols = List.mapi (fun i tupleField -> toSymbol tupleElementTypes.[i] tupleField) (List.ofArray tupleFields)
                 Symbols tupleFieldSymbols
+
+            // symbolize Record
             elif FSharpType.IsRecord sourceType then
                 let recordFields = FSharpValue.GetRecordFields source
                 let recordFieldTypes = FSharpType.GetRecordFields sourceType
                 let recordFieldSymbols = List.mapi (fun i recordField -> toSymbol recordFieldTypes.[i].PropertyType recordField) (List.ofArray recordFields)
                 Symbols recordFieldSymbols
+
+            // symbolize Union
             elif FSharpType.IsUnion sourceType then
                 let (unionCase, unionFields) = FSharpValue.GetUnionFields (source, sourceType)
                 let unionFieldTypes = unionCase.GetFields ()
@@ -108,6 +166,8 @@ type SymbolicConverter (pointType : Type) =
                     let unionSymbols = Atom unionCase.Name :: unionFieldSymbols
                     Symbols unionSymbols
                 else Atom unionCase.Name
+
+            // symbolize vanilla .NET type
             else
                 let typeConverter = TypeDescriptor.GetConverter sourceType
                 if typeConverter.CanConvertTo typeof<Symbol>
@@ -119,27 +179,50 @@ type SymbolicConverter (pointType : Type) =
         Symbol.toString symbol
 
     let rec fromSymbol (destType : Type) (symbol : Symbol) =
+
+        // desymbolize .NET primitive
         if destType.IsPrimitive then
             match symbol with
             | Atom str -> (TypeDescriptor.GetConverter destType).ConvertFromString str
             | Quote _ -> failwith "Expected Atom value for conversion to string."
             | Symbols _ -> failwith "Expected Atom value for conversion to string."
+
+        // desymbolize string
         elif destType = typeof<string> then
             match symbol with
             | Atom str -> str :> obj
             | Quote _ -> failwith "Expected Atom value for conversion to string."
             | Symbols _ -> failwith "Expected Atom value for conversion to string."
+
+        // desymbolize Symbol (no tranformation)
         elif destType = typeof<Symbol> then
-            // nothing to do when we want a symbol and already have it
             symbol :> obj
+
         else
             match destType.TryGetCustomTypeConverter () with
             | Some typeConverter ->
+
+                // desymbolize user-defined type
                 if typeConverter.CanConvertFrom typeof<Symbol>
                 then typeConverter.ConvertFrom symbol
                 else failwith ^ "Expected ability for convert from Symbol for custom type converter '" + getTypeName typeConverter + "'."
+
             | None ->
-                if destType.Name = typedefof<_ list>.Name then
+
+                // desymbolize array
+                if destType.Name = typedefof<_ array>.Name then
+                    match symbol with
+                    | Symbols symbols ->
+                        let gargs = destType.GetGenericArguments ()
+                        let elementType = gargs.[0]
+                        let elements = List.map (fromSymbol elementType) symbols
+                        let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
+                        let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.ArrayModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
+                        ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
+                    | _ -> failwith "Expected Symbols value for array."
+
+                // desymbolize list
+                elif destType.Name = typedefof<_ list>.Name then
                     match symbol with
                     | Symbols symbols ->
                         let gargs = destType.GetGenericArguments ()
@@ -149,6 +232,8 @@ type SymbolicConverter (pointType : Type) =
                         let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.ListModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
                         ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
                     | _ -> failwith "Expected Symbols value for list."
+
+                // desymbolize Set
                 elif destType.Name = typedefof<_ Set>.Name then
                     match symbol with
                     | Symbols symbols ->
@@ -159,6 +244,8 @@ type SymbolicConverter (pointType : Type) =
                         let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.SetModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
                         ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
                     | _ -> failwith "Expected Symbols value for Set."
+
+                // desymbolize Map
                 elif destType.Name = typedefof<Map<_, _>>.Name then
                     match symbol with
                     | Symbols symbols ->
@@ -172,6 +259,8 @@ type SymbolicConverter (pointType : Type) =
                             ofSeq.Invoke (null, [|cast.Invoke (null, [|pairList|])|])
                         | _ -> failwithumf ()
                     | _ -> failwith "Expected Symbols value for Map."
+
+                // desymbolize Vmap
                 elif destType.Name = typedefof<Vmap<_, _>>.Name then
                     match symbol with
                     | Symbols symbols ->
@@ -185,6 +274,8 @@ type SymbolicConverter (pointType : Type) =
                             ofSeq.Invoke (null, [|cast.Invoke (null, [|pairList|])|])
                         | _ -> failwithumf ()
                     | _ -> failwith "Expected Symbols value for Vmap."
+
+                // desymbolize SymbolicCompression
                 elif destType.Name = typedefof<SymbolicCompression<_, _>>.Name then
                     match symbol with
                     | Symbols symbols ->
@@ -205,20 +296,28 @@ type SymbolicConverter (pointType : Type) =
                                 FSharpValue.MakeUnion (compressionUnion, [|b|])
                         | _ -> failwith "Expected Atom value for SymbolicCompression union name."
                     | _ -> failwith "Expected Symbols value for SymbolicCompression."
+
+                // desymbolize Tuple
                 elif FSharpType.IsTuple destType then
                     match symbol with
                     | Symbols symbols ->
                         let elementTypes = FSharpType.GetTupleElements destType
                         let elements = List.mapi (fun i elementSymbol -> fromSymbol elementTypes.[i] elementSymbol) symbols
-                        FSharpValue.MakeTuple (Array.ofList elements, destType)
+                        let elements = padWithDefaults' elementTypes elements
+                        FSharpValue.MakeTuple (elements, destType)
                     | _ -> failwith "Expected Symbols value for FSharp.Tuple."
+
+                // desymbolize Record
                 elif FSharpType.IsRecord destType then
                     match symbol with
                     | Symbols symbols ->
                         let fieldTypes = FSharpType.GetRecordFields destType
                         let fields = List.mapi (fun i fieldSymbol -> fromSymbol fieldTypes.[i].PropertyType fieldSymbol) symbols
-                        FSharpValue.MakeRecord (destType, Array.ofList fields)
+                        let fields = padWithDefaults fieldTypes fields
+                        FSharpValue.MakeRecord (destType, fields)
                     | _ -> failwith "Expected Symbols value for FSharp.Record."
+
+                // desymbolize Union
                 elif FSharpType.IsUnion destType && destType <> typeof<string list> then
                     let unionCases = FSharpType.GetUnionCases destType
                     match symbol with
@@ -232,9 +331,12 @@ type SymbolicConverter (pointType : Type) =
                             let unionCase = Array.find (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases
                             let unionFieldTypes = unionCase.GetFields ()
                             let unionValues = List.mapi (fun i unionSymbol -> fromSymbol unionFieldTypes.[i].PropertyType unionSymbol) symbolTail
-                            FSharpValue.MakeUnion (unionCase, Array.ofList unionValues)
+                            let unionValues = padWithDefaults unionFieldTypes unionValues
+                            FSharpValue.MakeUnion (unionCase, unionValues)
                         | _ -> failwith "Expected Atom value for FSharp.Union name."
                     | _ -> failwith "Expected Atom or Symbols value for FSharp.Union."
+
+                // desymbolize vanilla .NET type
                 else
                     match symbol with
                     | Atom str -> (TypeDescriptor.GetConverter destType).ConvertFromString str
