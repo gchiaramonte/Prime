@@ -65,6 +65,9 @@ module Symbol =
         NumberLiteralOptions.AllowFraction |||
         NumberLiteralOptions.AllowHexadecimal
 
+    let getOptOrigin symbol =
+        match symbol with Atom (_, optOrigin) | Number (_, optOrigin) | String (_, optOrigin) | Quote (_, optOrigin) | Symbols (_, optOrigin) -> optOrigin
+
     let expand (unexpanded : string) =
         if unexpanded.IndexOfAny OpsUnexpanded = 0 then
             let partsExpanded = Seq.map (fun (part : char) -> match Array.IndexOf (OpsExpanded, part) with -1 -> string part | i -> OpsExpanded.[i]) unexpanded

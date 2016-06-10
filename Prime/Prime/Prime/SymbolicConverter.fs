@@ -337,17 +337,26 @@ type SymbolicConverter (pointType : Type) =
                     let unionCases = FSharpType.GetUnionCases destType
                     match symbol with
                     | Atom (unionName, _) ->
-                        let unionCase = Array.find (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases
-                        FSharpValue.MakeUnion (unionCase, [||])
+                        match Array.tryFind (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases with
+                        | Some unionCase -> FSharpValue.MakeUnion (unionCase, [||])
+                        | None ->
+                            let unionNames = unionCases |> Array.map (fun unionCase -> unionCase.Name) |> curry String.Join " | "
+                            let optOrigin = Symbol.getOptOrigin symbol
+                            failwith ^ "Expected one of the following Atom values for Union name: '" + unionNames + "'" + Origin.tryPrint optOrigin
                     | Symbols (symbols, optOrigin) ->
                         match symbols with
                         | (Atom (symbolHead, _)) :: symbolTail ->
                             let unionName = symbolHead
-                            let unionCase = Array.find (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases
-                            let unionFieldTypes = unionCase.GetFields ()
-                            let unionValues = List.mapi (fun i unionSymbol -> fromSymbol unionFieldTypes.[i].PropertyType unionSymbol) symbolTail
-                            let unionValues = padWithDefaults unionFieldTypes unionValues
-                            FSharpValue.MakeUnion (unionCase, unionValues)
+                            match Array.tryFind (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases with
+                            | Some unionCase ->
+                                let unionFieldTypes = unionCase.GetFields ()
+                                let unionValues = List.mapi (fun i unionSymbol -> fromSymbol unionFieldTypes.[i].PropertyType unionSymbol) symbolTail
+                                let unionValues = padWithDefaults unionFieldTypes unionValues
+                                FSharpValue.MakeUnion (unionCase, unionValues)
+                            | None ->
+                                let unionNames = unionCases |> Array.map (fun unionCase -> unionCase.Name) |> curry String.Join " | "
+                                let optOrigin = Symbol.getOptOrigin symbol
+                                failwith ^ "Expected one of the following Atom values for Union name: '" + unionNames + "'" + Origin.tryPrint optOrigin
                         | (Number (_, optOrigin) | String (_, optOrigin) | Quote (_, optOrigin) | Symbols (_, optOrigin)) :: _ ->
                             failwith ^ "Expected Atom value for Union name" + Origin.tryPrint optOrigin
                         | [] -> failwith ^ "Expected Atom value for Union name" + Origin.tryPrint optOrigin
