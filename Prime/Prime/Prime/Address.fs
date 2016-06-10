@@ -12,12 +12,12 @@ open Prime
 /// Converts Address types.
 type AddressConverter (targetType : Type) =
     inherit TypeConverter ()
-    
+
     override this.CanConvertTo (_, destType) =
         destType = typeof<string> ||
         destType = typeof<Symbol> ||
         destType = targetType
-        
+
     override this.ConvertTo (_, _, source, destType) =
         if destType = typeof<string> then
             let toStringMethod = targetType.GetMethod "ToString"
@@ -25,15 +25,16 @@ type AddressConverter (targetType : Type) =
         elif destType = typeof<Symbol> then
             let toStringMethod = targetType.GetMethod "ToString"
             let addressStr = toStringMethod.Invoke (source, null) :?> string
-            Atom addressStr :> obj
+            if Symbol.shouldBeExplicit addressStr then String addressStr :> obj
+            else Atom addressStr :> obj
         elif destType = targetType then source
         else failwith "Invalid AddressConverter conversion to source."
-        
+
     override this.CanConvertFrom (_, sourceType) =
         sourceType = typeof<string> ||
         sourceType = typeof<Symbol> ||
         sourceType = targetType
-        
+
     override this.ConvertFrom (_, _, source) =
         match source with
         | :? string as addressStr ->
@@ -43,11 +44,11 @@ type AddressConverter (targetType : Type) =
             ftoaFunctionGeneric.Invoke (null, [|fullName|])
         | :? Symbol as addressSymbol ->
             match addressSymbol with
-            | Atom addressStr ->
+            | Atom addressStr | Number addressStr | String addressStr ->
                 let fullName = Name.make addressStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | _ -> failwith "Invalid NameConverter conversion from source."
+            | Quote _ | Symbols _ -> failwith "Expected Symbol, Number, or String for conversion to Address."
         | _ ->
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid AddressConverter conversion from source."

@@ -93,7 +93,7 @@ type [<StructuralEquality; NoComparison>] ParticipantChangeData<'p, 'w when 'p :
 module Events =
 
     /// Represents any event.
-    let Any = ntoa<obj> !!"*"
+    let Any = ntoa<obj> !!"@"
 
 [<AutoOpen>]
 module EventSystemModule =

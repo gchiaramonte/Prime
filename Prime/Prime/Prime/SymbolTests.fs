@@ -20,6 +20,21 @@ type [<StructuralEquality; NoComparison>] ComplexUnion =
 
 module SymbolTests =
     
+    let [<Fact>] canConvertStringToAtom () =
+        let converter = SymbolicConverter typeof<Symbol>
+        let value = converter.ConvertFromString "atom" :?> Symbol
+        Assert.Equal (Atom "atom", value)
+    
+    let [<Fact>] canConvertStringToNumber () =
+        let converter = SymbolicConverter typeof<Symbol>
+        let value = converter.ConvertFromString "0" :?> Symbol
+        Assert.Equal (Number "0", value)
+    
+    let [<Fact>] canConvertStringToString () =
+        let converter = SymbolicConverter typeof<Symbol>
+        let value = converter.ConvertFromString "\"str\"" :?> Symbol
+        Assert.Equal (String "str", value)
+
     let [<Fact>] canConvertStringToInt () =
         let value = scvalue<int> "0"
         Assert.Equal (0, value)

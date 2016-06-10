@@ -61,4 +61,4 @@ module SymbolIndex =
         match fromString str with
         | Some indexLocation -> advance false 0 0 indexLocation
         | None -> ()
-        builder.ToString ()
+        string builder

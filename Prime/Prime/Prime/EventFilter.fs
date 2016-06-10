@@ -14,10 +14,10 @@ type RexprConverter () =
 
     override this.ConvertTo (_, _, source, destType) =
         if destType = typeof<string> then
-            source.ToString () :> obj
+            string source :> obj
         elif destType = typeof<Symbol> then
             let rexpr = source :?> Rexpr
-            Atom ^ rexpr.ToString () :> obj
+            Symbol.String ^ string rexpr :> obj
         elif destType = typeof<Rexpr> then source
         else failwith "Invalid RexprConverter conversion to source."
 
@@ -31,9 +31,8 @@ type RexprConverter () =
         | :? string as str -> scvalue<Rexpr> str :> obj
         | :? Symbol as symbol ->
             match symbol with
-            | Atom pattern -> Rexpr pattern :> obj
-            | Quote _ -> failwith "Expected Atom value for conversion to string."
-            | Symbols _ -> failwith "Expected Atom value for conversion to string."
+            | Atom pattern | Number pattern | String pattern -> Rexpr pattern :> obj
+            | Quote _ | Symbols _ -> failwith "Expected Symbol, Number, or String for conversion to Rexpr."
         | :? Rexpr -> source
         | _ -> failwith "Invalid RexprConverter conversion from source."
 

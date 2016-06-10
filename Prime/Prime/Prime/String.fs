@@ -22,7 +22,7 @@ module String =
     let implode chars =
         let sb = StringBuilder ()
         List.iter (fun (chr : char) -> ignore (sb.Append chr)) chars
-        sb.ToString ()
+        string sb
 
     /// Textualize a string for usage as text.
     let textualize (str : string) =
