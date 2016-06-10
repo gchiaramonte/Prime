@@ -55,10 +55,10 @@ module EventFilter =
     /// Filter events.
     let rec filter addressStr traceRev eventFilter =
         match eventFilter with
-        | EventFilter.Any exprs -> List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
-        | EventFilter.All exprs -> List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
-        | EventFilter.None exprs -> not ^ List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
-        | EventFilter.Pattern (addressRexpr, traceRexpr) ->
+        | Any exprs -> List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
+        | All exprs -> List.fold (fun passed eventFilter -> passed && filter addressStr traceRev eventFilter) true exprs
+        | None exprs -> not ^ List.fold (fun passed eventFilter -> passed || filter addressStr traceRev eventFilter) false exprs
+        | Pattern (addressRexpr, traceRexpr) ->
             if addressRexpr.IsMatch addressStr then
                 let mutable passes = true
                 let mutable enr = enumerator traceRexpr
@@ -67,7 +67,7 @@ module EventFilter =
                         passes <- enr.Current.IsMatch (scstring eventInfo)
                 passes
             else false
-        | EventFilter.Empty -> true
+        | Empty -> true
 
 [<AutoOpen>]
 module EventFilterModule =

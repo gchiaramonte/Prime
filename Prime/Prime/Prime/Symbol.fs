@@ -36,13 +36,6 @@ type Symbol =
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Symbol =
 
-    let [<Literal>] NumberFormat =
-        NumberLiteralOptions.AllowMinusSign |||
-        NumberLiteralOptions.AllowPlusSign |||
-        NumberLiteralOptions.AllowExponent |||
-        NumberLiteralOptions.AllowFraction |||
-        NumberLiteralOptions.AllowHexadecimal
-
     let [<Literal>] NewlineChars = "\n\r"
     let [<Literal>] WhitespaceChars = " \t" + NewlineChars
     let [<Literal>] SeparatorChar = ' '
@@ -61,54 +54,33 @@ module Symbol =
     let [<Literal>] CloseQuoteStr = "\'"
     let [<Literal>] StructureCharsNoStr = "[]`\'"
     let [<Literal>] StructureChars = "\"" + StructureCharsNoStr
-    let [<Literal>] OpsReserved = "@#." // @ reserved for wildcards, # reserved for comment syntax, . reserved for pair syntax (expands to [key value])
-    let (*Literal*) OpsUnexpanded = "!$%^&*+-=|<>?/" |> Array.ofSeq
-    let (*Literal*) OpsExpanded = [|"Not_"; "At_"; "Num_"; "Set_"; "Mod_"; "Xor_"; "And_"; "Mul_"; "Add_"; "Sub_"; "Eq_"; "Or_"; "Lt_"; "Gt_"; "Get_"; "Div_"|]
+    let [<Literal>] OpsReserved = "@#:." // @ reserved for wildcards, # reserved for comment syntax, : reserved for pair syntax (expands to [key value]), . reserved for pathing
+    let (*Literal*) OpsSeparator =  [|  '_'|]
+    let (*Literal*) OpsExpanded =   [|  "Nor";  "Not";  "Nand"; "Mod";  "Xor";  "And";  "Mul";  "Add";  "Sub";  "Eq";   "Or";   "Lt";   "Gt";   "Get";  "Div"   |]
+    let (*Literal*) OpsUnexpanded = [|  '~';    '!';    '$';    '%';    '^';    '&';    '*';    '+';    '-';    '=';    '|';    '<';    '>';    '?';    '/'     |]
+    let [<Literal>] NumberFormat =
+        NumberLiteralOptions.AllowMinusSign |||
+        NumberLiteralOptions.AllowPlusSign |||
+        NumberLiteralOptions.AllowExponent |||
+        NumberLiteralOptions.AllowFraction |||
+        NumberLiteralOptions.AllowHexadecimal
 
     let expand (unexpanded : string) =
         if unexpanded.IndexOfAny OpsUnexpanded = 0 then
-            Seq.fold
-                (fun expanded chr ->
-                    let str =
-                        match chr with
-                        | '!' -> "Not_"
-                        | '$' -> "Set_"
-                        | '%' -> "Mod_"
-                        | '^' -> "Xor_"
-                        | '&' -> "And_"
-                        | '*' -> "Mul_"
-                        | '+' -> "Add_"
-                        | '-' -> "Sub_"
-                        | '=' -> "Eq_"
-                        | '|' -> "Or_"
-                        | '<' -> "Lt_"
-                        | '>' -> "Gt_"
-                        | '?' -> "Get_"
-                        | '/' -> "Div_"
-                        | _ -> string chr
-                    expanded + str)
-                "" unexpanded
+            let partsExpanded = Seq.map (fun (part : char) -> match Array.IndexOf (OpsExpanded, part) with -1 -> string part | i -> OpsExpanded.[i]) unexpanded
+            let expanded = String.Concat partsExpanded
+            expanded
         else unexpanded
 
     let unexpand (expanded : string) =
-        if Seq.exists (fun expandedOp -> expanded.StartsWith expandedOp) OpsExpanded then
-            expanded
-                .Replace("Not_", "!")
-                .Replace("Set_", "$")
-                .Replace("Mod_", "%")
-                .Replace("Xor_", "^")
-                .Replace("And_", "&")
-                .Replace("Mul_", "*")
-                .Replace("Add_", "+")
-                .Replace("Sub_", "-")
-                .Replace("Eq_",  "=")
-                .Replace("Or_",  "|")
-                .Replace("Lt_",  "<")
-                .Replace("Gt_",  ">")
-                .Replace("Get_", "?")
-                .Replace("Div_", "/")
+        if expanded.IndexOf OpsSeparator.[0] >= 0 then // OPTIMIZATION: to ease GC pressure, only split string when a separator is found
+            let parts = expanded.Split OpsSeparator
+            if Array.IndexOf (OpsExpanded, parts.[0]) = 0 then
+                let partsUnexpanded = Array.map (fun (part : string) -> match part.IndexOfAny OpsUnexpanded with -1 -> part | i -> string OpsUnexpanded.[i]) parts
+                let unexpanded = String.Concat partsUnexpanded
+                unexpanded
+            else expanded
         else expanded
-
 
     let isExplicit (str : string) =
         str.StartsWith OpenStringStr && str.EndsWith CloseStringStr
