@@ -28,7 +28,7 @@ type AddressConverter (targetType : Type) =
             if Symbol.shouldBeExplicit addressStr then String (addressStr, None) :> obj
             else Atom (addressStr, None) :> obj
         elif destType = targetType then source
-        else failwith "Invalid AddressConverter conversion to source."
+        else failconv "Invalid AddressConverter conversion to source." None
 
     override this.CanConvertFrom (_, sourceType) =
         sourceType = typeof<string> ||
@@ -48,10 +48,11 @@ type AddressConverter (targetType : Type) =
                 let fullName = Name.make addressStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Address" + Origin.tryPrint optOrigin
+            | Quote (_, _) | Symbols (_, _) ->
+                failconv "Expected Symbol, Number, or String for conversion to Address." ^ Some addressSymbol
         | _ ->
             if targetType.IsInstanceOfType source then source
-            else failwith "Invalid AddressConverter conversion from source."
+            else failconv "Invalid AddressConverter conversion from source." None
 
 [<AutoOpen>]
 module AddressModule =

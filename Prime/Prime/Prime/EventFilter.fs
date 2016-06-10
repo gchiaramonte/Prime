@@ -19,7 +19,7 @@ type RexprConverter () =
             let rexpr = source :?> Rexpr
             Symbol.String (string rexpr, None) :> obj
         elif destType = typeof<Rexpr> then source
-        else failwith "Invalid RexprConverter conversion to source."
+        else failconv "Invalid RexprConverter conversion to source." None
 
     override this.CanConvertFrom (_, sourceType) =
         sourceType = typeof<string> ||
@@ -32,9 +32,9 @@ type RexprConverter () =
         | :? Symbol as symbol ->
             match symbol with
             | Atom (pattern, _) | Number (pattern, _) | String (pattern, _) -> Rexpr pattern :> obj
-            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Rexpr" + Origin.tryPrint optOrigin
+            | Quote (_, _) | Symbols (_, _) -> failconv "Expected Symbol, Number, or String for conversion to Rexpr." ^ Some symbol
         | :? Rexpr -> source
-        | _ -> failwith "Invalid RexprConverter conversion from source."
+        | _ -> failconv "Invalid RexprConverter conversion from source." None
 
 /// Effectively new-types the Regex type to implement custom type-conversation without needing
 /// explicit initialization by the client program.

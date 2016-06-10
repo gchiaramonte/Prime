@@ -28,7 +28,7 @@ type RelationConverter (targetType : Type) =
             if Symbol.shouldBeExplicit relationStr then String (relationStr, None) :> obj
             else Atom (relationStr, None) :> obj
         elif destType = targetType then source
-        else failwith "Invalid RelationConverter conversion to source."
+        else failconv "Invalid RelationConverter conversion to source." None
         
     override this.CanConvertFrom (_, sourceType) =
         sourceType = typeof<string> ||
@@ -47,10 +47,11 @@ type RelationConverter (targetType : Type) =
                 let fullName = !!relationStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Relation" + Origin.tryPrint optOrigin
+            | Quote (_, _) | Symbols (_, _) ->
+                failconv "Expected Symbol, Number, or String for conversion to Relation." ^ Some relationSymbol
         | _ ->
             if targetType.IsInstanceOfType source then source
-            else failwith "Invalid RelationConverter conversion from source."
+            else failconv "Invalid RelationConverter conversion from source." None
 
 [<AutoOpen>]
 module RelationModule =

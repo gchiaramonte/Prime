@@ -12,19 +12,13 @@ type Origin =
     { Start : Position
       Stop : Position }
 
-    static member printStart origin =
-        "[Ln: " + string origin.Start.Line + ", Col: " + string origin.Start.Column + "]"
+[<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module Origin =
 
-    static member printStop origin =
-        "[Ln: " + string origin.Stop.Line + ", Col: " + string origin.Stop.Column + "]"
-
-    static member print origin =
-        " starting at " + Origin.printStart origin + " and stopping at " + Origin.printStop origin + "."
-
-    static member tryPrint optOrigin =
-        match optOrigin with
-        | Some origin -> Origin.print origin
-        | None -> "."
+    let printStart origin = "[Ln: " + string origin.Start.Line + ", Col: " + string origin.Start.Column + "]"
+    let printStop origin = "[Ln: " + string origin.Stop.Line + ", Col: " + string origin.Stop.Column + "]"
+    let print origin = "Error found starting at " + printStart origin + " and stopping at " + printStop origin + "."
+    let tryPrint optOrigin = match optOrigin with Some origin -> print origin | None -> "Error origin unknown or not applicable."
 
 type Symbol =
     | Atom of string * Origin option
@@ -64,9 +58,6 @@ module Symbol =
         NumberLiteralOptions.AllowExponent |||
         NumberLiteralOptions.AllowFraction |||
         NumberLiteralOptions.AllowHexadecimal
-
-    let getOptOrigin symbol =
-        match symbol with Atom (_, optOrigin) | Number (_, optOrigin) | String (_, optOrigin) | Quote (_, optOrigin) | Symbols (_, optOrigin) -> optOrigin
 
     let expand (unexpanded : string) =
         if unexpanded.IndexOfAny OpsUnexpanded = 0 then
@@ -240,3 +231,24 @@ module Symbol =
     ///
     /// ...and so on.
     let rec toString symbol = writeSymbol symbol
+
+    /// Try to get the Origin of the symbol if it has one.
+    let tryGetOrigin symbol =
+        match symbol with
+        | Atom (_, optOrigin)
+        | Number (_, optOrigin)
+        | String (_, optOrigin)
+        | Quote (_, optOrigin)
+        | Symbols (_, optOrigin) -> optOrigin
+
+type ConversionException (message : string, optSymbol : Symbol option) =
+    inherit Exception (message)
+    override this.ToString () =
+        message + "\r\n" +
+        (match optSymbol with Some symbol -> Origin.tryPrint (Symbol.tryGetOrigin symbol) + "\r\n" | _ -> "") +
+        base.ToString ()
+
+[<AutoOpen>]
+module ConversionExceptionOperators =
+    let failconv message symbol =
+        raise ^ ConversionException (message, symbol)
