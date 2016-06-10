@@ -54,7 +54,7 @@ module SymbolIndex =
                 List.iteri (advance true tabDepth) symbolIndices
             | SymbolsIndex (index, symbolIndices) ->
                 if index <> 0L && (hasContentParent || childIndex <> 0) then
-                    let whitespace = "\n" + String.replicate tabDepth " "
+                    let whitespace = "\r\n" + String.replicate tabDepth " "
                     ignore ^ builder.Insert (int index + builderIndex, whitespace)
                     builderIndex <- builderIndex + whitespace.Length
                 List.iteri (advance false (tabDepth + 1)) symbolIndices
