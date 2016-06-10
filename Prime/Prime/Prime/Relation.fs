@@ -25,8 +25,8 @@ type RelationConverter (targetType : Type) =
         elif destType = typeof<Symbol> then
             let toStringMethod = targetType.GetMethod "ToString"
             let relationStr = toStringMethod.Invoke (source, null) :?> string
-            if Symbol.shouldBeExplicit relationStr then String relationStr :> obj
-            else Atom relationStr :> obj
+            if Symbol.shouldBeExplicit relationStr then String (relationStr, None) :> obj
+            else Atom (relationStr, None) :> obj
         elif destType = targetType then source
         else failwith "Invalid RelationConverter conversion to source."
         
@@ -43,11 +43,11 @@ type RelationConverter (targetType : Type) =
             ftoaFunction.Invoke (null, [|fullName|])
         | :? Symbol as relationSymbol ->
             match relationSymbol with
-            | Atom relationStr | Number relationStr | String relationStr -> 
+            | Atom (relationStr, _) | Number (relationStr, _) | String (relationStr, _) -> 
                 let fullName = !!relationStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | Quote _ | Symbols _ -> failwith "Expected Symbol, Number, or String for conversion to Relation."
+            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Relation" + Origin.tryPrint optOrigin
         | _ ->
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid RelationConverter conversion from source."

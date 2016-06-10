@@ -25,8 +25,8 @@ type AddressConverter (targetType : Type) =
         elif destType = typeof<Symbol> then
             let toStringMethod = targetType.GetMethod "ToString"
             let addressStr = toStringMethod.Invoke (source, null) :?> string
-            if Symbol.shouldBeExplicit addressStr then String addressStr :> obj
-            else Atom addressStr :> obj
+            if Symbol.shouldBeExplicit addressStr then String (addressStr, None) :> obj
+            else Atom (addressStr, None) :> obj
         elif destType = targetType then source
         else failwith "Invalid AddressConverter conversion to source."
 
@@ -44,11 +44,11 @@ type AddressConverter (targetType : Type) =
             ftoaFunctionGeneric.Invoke (null, [|fullName|])
         | :? Symbol as addressSymbol ->
             match addressSymbol with
-            | Atom addressStr | Number addressStr | String addressStr ->
+            | Atom (addressStr, _) | Number (addressStr, _) | String (addressStr, _) ->
                 let fullName = Name.make addressStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | Quote _ | Symbols _ -> failwith "Expected Symbol, Number, or String for conversion to Address."
+            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Address" + Origin.tryPrint optOrigin
         | _ ->
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid AddressConverter conversion from source."

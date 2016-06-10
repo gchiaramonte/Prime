@@ -22,18 +22,21 @@ module SymbolTests =
     
     let [<Fact>] canConvertStringToAtom () =
         let converter = SymbolicConverter typeof<Symbol>
-        let value = converter.ConvertFromString "atom" :?> Symbol
-        Assert.Equal (Atom "atom", value)
+        match converter.ConvertFromString "atom" :?> Symbol with
+        | Atom (str, _) -> Assert.Equal<string> ("atom", str)
+        | _ -> Assert.True false
     
     let [<Fact>] canConvertStringToNumber () =
         let converter = SymbolicConverter typeof<Symbol>
-        let value = converter.ConvertFromString "0" :?> Symbol
-        Assert.Equal (Number "0", value)
+        match converter.ConvertFromString "0" :?> Symbol with
+        | Number (str, _) -> Assert.Equal<string> ("0", str)
+        | _ -> Assert.True false
     
     let [<Fact>] canConvertStringToString () =
         let converter = SymbolicConverter typeof<Symbol>
-        let value = converter.ConvertFromString "\"str\"" :?> Symbol
-        Assert.Equal (String "str", value)
+        match converter.ConvertFromString "\"str\"" :?> Symbol with
+        | String (str, _) -> Assert.Equal<string> ("str", str)
+        | _ -> Assert.True false
 
     let [<Fact>] canConvertStringToInt () =
         let value = scvalue<int> "0"

@@ -23,8 +23,8 @@ type NameConverter (targetType : Type) =
         elif destType = typeof<Symbol> then
             let toStringMethod = targetType.GetMethod "ToString"
             let nameStr = toStringMethod.Invoke (source, null) :?> string
-            if Symbol.shouldBeExplicit nameStr then String nameStr :> obj
-            else Atom nameStr :> obj
+            if Symbol.shouldBeExplicit nameStr then String (nameStr, None) :> obj
+            else Atom (nameStr, None) :> obj
         elif destType = targetType then source
         else failwith "Invalid NameConverter conversion to source."
         
@@ -40,10 +40,10 @@ type NameConverter (targetType : Type) =
             makeFunction.Invoke (null, [|nameStr|])
         | :? Symbol as nameSymbol ->
             match nameSymbol with
-            | Atom nameStr | Number nameStr | String nameStr ->
+            | Atom (nameStr, _) | Number (nameStr, _) | String (nameStr, _) ->
                 let makeFunction = targetType.GetMethod ("make", BindingFlags.Static ||| BindingFlags.Public)
                 makeFunction.Invoke (null, [|nameStr|])
-            | Quote _ | Symbols _ -> failwith "Expected Symbol, Number, or String for conversion to Name."
+            | Quote (_, optOrigin) | Symbols (_, optOrigin) -> failwith ^ "Expected Symbol, Number, or String for conversion to Name" + Origin.tryPrint optOrigin
         | _ ->
             if targetType.IsInstanceOfType source then source
             else failwith "Invalid NameConverter conversion from source."

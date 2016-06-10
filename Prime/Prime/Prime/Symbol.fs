@@ -8,12 +8,30 @@ open Microsoft.FSharp.Reflection
 open FParsec
 open Prime
 
+type Origin =
+    { Start : Position
+      Stop : Position }
+
+    static member printStart origin =
+        "[Ln: " + string origin.Start.Line + ", Col: " + string origin.Start.Column + "]"
+
+    static member printStop origin =
+        "[Ln: " + string origin.Stop.Line + ", Col: " + string origin.Stop.Column + "]"
+
+    static member print origin =
+        " starting at " + Origin.printStart origin + " and stopping at " + Origin.printStop origin + "."
+
+    static member tryPrint optOrigin =
+        match optOrigin with
+        | Some origin -> Origin.print origin
+        | None -> "."
+
 type Symbol =
-    | Atom of string
-    | Number of string
-    | String of string
-    | Quote of string
-    | Symbols of Symbol list
+    | Atom of string * Origin option
+    | Number of string * Origin option
+    | String of string * Origin option
+    | Quote of string * Origin option
+    | Symbols of Symbol list * Origin option
 
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Symbol =
@@ -123,36 +141,54 @@ module Symbol =
 
     let readAtom =
         parse {
+            let! start = getPosition
             let! chars = readAtomChars
             do! skipWhitespaces
-            return chars |> String.implode |> (fun str -> str.TrimEnd ()) |> expand |> Atom }
+            let! stop = getPosition
+            let str = chars |> String.implode |> (fun str -> str.TrimEnd ()) |> expand
+            let origin = Some { Start = start; Stop = stop }
+            return Atom (str, origin) }
 
     let readNumber =
         parse {
+            let! start = getPosition
             let! number = numberLiteral NumberFormat "number"
             do! skipWhitespaces
-            return Number number.String }
+            let! stop = getPosition
+            let origin = Some { Start = start; Stop = stop }
+            return Number (number.String, origin) }
 
     let readString =
         parse {
+            let! start = getPosition
             do! openStringForm
             let! escaped = readStringChars
             do! closeStringForm
-            return escaped |> String.implode |> String }
+            let! stop = getPosition
+            let str = escaped |> String.implode
+            let origin = Some { Start = start; Stop = stop }
+            return String (str, origin) }
 
     let readQuote =
         parse {
+            let! start = getPosition
             do! openQuoteForm
             let! quoteChars = readQuoteChars
             do! closeQuoteForm
-            return quoteChars |> String.implode |> Quote }
+            let! stop = getPosition
+            let str = quoteChars |> String.implode
+            let origin = Some { Start = start; Stop = stop }
+            return Quote (str, origin) }
 
     let readSymbols =
         parse {
+            let! start = getPosition
             do! openSymbolsForm
             let! symbols = many readSymbol
             do! closeSymbolsForm
-            return symbols |> Symbols }
+            let! stop = getPosition
+            let origin = Some { Start = start; Stop = stop }
+            return Symbols (symbols, origin) }
 
     do refReadSymbol :=
         attempt readQuote <|>
@@ -163,15 +199,15 @@ module Symbol =
 
     let rec writeSymbol symbol =
         match symbol with
-        | Atom str ->
+        | Atom (str, _) ->
             if Seq.isEmpty str then OpenStringStr + CloseStringStr
             elif not (isExplicit str) && shouldBeExplicit str then OpenStringStr + str + CloseStringStr
             elif isExplicit str && not (shouldBeExplicit str) then str.Substring (1, str.Length - 2)
             else unexpand str
-        | Number str -> str
-        | String str -> OpenStringStr + str + CloseStringStr
-        | Quote str -> OpenQuoteStr + str + CloseQuoteStr
-        | Symbols symbols -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
+        | Number (str, _) -> str
+        | String (str, _) -> OpenStringStr + str + CloseStringStr
+        | Quote (str, _) -> OpenQuoteStr + str + CloseQuoteStr
+        | Symbols (symbols, _) -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
 
     /// Convert a string to a symbol, with the following parses:
     /// 
