@@ -85,21 +85,20 @@ module Symbol =
     let skipWhitespace = skipAnyOf WhitespaceChars
     let skipWhitespaces = skipMany skipWhitespace
 
-    let charForm character = skipChar character >>. skipWhitespaces
-    let openSymbolsForm = charForm OpenSymbolsChar
-    let closeSymbolsForm = charForm CloseSymbolsChar
-    let openStringForm = skipChar OpenStringChar
-    let closeStringForm = charForm CloseStringChar
-    let openQuoteForm = charForm OpenQuoteChar
-    let closeQuoteForm = charForm CloseQuoteChar
+    let openSymbols = skipChar OpenSymbolsChar
+    let closeSymbols = skipChar CloseSymbolsChar
+    let openString = skipChar OpenStringChar
+    let closeString = skipChar CloseStringChar
+    let openQuote = skipChar OpenQuoteChar
+    let closeQuote = skipChar CloseQuoteChar
 
     let readAtomChars = many1 (noneOf (StructureChars + WhitespaceChars))
     let readStringChars = many (noneOf [CloseStringChar])
     let readQuoteChars = many (noneOf [CloseQuoteChar])
     let readContentChars =
         many1
-            ((attempt (openQuoteForm >>. readQuoteChars .>> closeQuoteForm)) <|>
-             (attempt (openStringForm >>. readStringChars .>> closeStringForm)) <|>
+            ((attempt (openQuote >>. skipWhitespaces >>. readQuoteChars .>> closeQuote .>> skipWhitespaces)) <|>
+             (attempt (openString >>. skipWhitespaces >>. readStringChars .>> closeString .>> skipWhitespaces)) <|>
              (readAtomChars .>> skipWhitespaces))
 
     let (readSymbol : Parser<Symbol, unit>, private refReadSymbol : Parser<Symbol, unit> ref) =
@@ -109,8 +108,8 @@ module Symbol =
         parse {
             let! start = getPosition
             let! chars = readAtomChars
-            do! skipWhitespaces
             let! stop = getPosition
+            do! skipWhitespaces
             let str = chars |> String.implode |> (fun str -> str.TrimEnd ()) |> expand
             let origin = Some { Start = start; Stop = stop }
             return Atom (str, origin) }
@@ -119,18 +118,20 @@ module Symbol =
         parse {
             let! start = getPosition
             let! number = numberLiteral NumberFormat "number"
-            do! skipWhitespaces
             let! stop = getPosition
+            do! skipWhitespaces
             let origin = Some { Start = start; Stop = stop }
             return Number (number.String, origin) }
 
     let readString =
         parse {
             let! start = getPosition
-            do! openStringForm
+            do! openString
+            do! skipWhitespaces
             let! escaped = readStringChars
-            do! closeStringForm
+            do! closeString
             let! stop = getPosition
+            do! skipWhitespaces
             let str = escaped |> String.implode
             let origin = Some { Start = start; Stop = stop }
             return String (str, origin) }
@@ -138,10 +139,12 @@ module Symbol =
     let readQuote =
         parse {
             let! start = getPosition
-            do! openQuoteForm
+            do! openQuote
+            do! skipWhitespaces
             let! quoteChars = readQuoteChars
-            do! closeQuoteForm
+            do! closeQuote
             let! stop = getPosition
+            do! skipWhitespaces
             let str = quoteChars |> String.implode
             let origin = Some { Start = start; Stop = stop }
             return Quote (str, origin) }
@@ -149,10 +152,12 @@ module Symbol =
     let readSymbols =
         parse {
             let! start = getPosition
-            do! openSymbolsForm
+            do! openSymbols
+            do! skipWhitespaces
             let! symbols = many readSymbol
-            do! closeSymbolsForm
+            do! closeSymbols
             let! stop = getPosition
+            do! skipWhitespaces
             let origin = Some { Start = start; Stop = stop }
             return Symbols (symbols, origin) }
 
@@ -243,6 +248,7 @@ module Symbol =
 
 type ConversionException (message : string, optSymbol : Symbol option) =
     inherit Exception (message)
+    member this.OptSymbol = optSymbol
     override this.ToString () =
         message + "\r\n" +
         (match optSymbol with Some symbol -> Origin.tryPrint (Symbol.tryGetOrigin symbol) + "\r\n" | _ -> "") +

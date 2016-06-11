@@ -27,9 +27,11 @@ module SymbolIndex =
     let readSymbolsIndex =
         parse {
             let! openPosition = getPosition
-            do! Symbol.openSymbolsForm
+            do! Symbol.openSymbols
+            do! Symbol.skipWhitespaces
             let! symbolIndices = many readSymbolIndex
-            do! Symbol.closeSymbolsForm
+            do! Symbol.closeSymbols
+            do! Symbol.skipWhitespaces
             return SymbolsIndex (openPosition.Index, symbolIndices) }
 
     do refReadSymbolIndex :=
