@@ -8,8 +8,7 @@ open System.ComponentModel
 open Prime
 
 /// An attribute to specify the default value of an XProperty.
-[<AttributeUsage (AttributeTargets.Class)>]
-type XDefaultValueAttribute (defaultValue : obj) =
+type [<AttributeUsage (AttributeTargets.Class); AllowNullLiteral>] XDefaultValueAttribute (defaultValue : obj) =
     inherit Attribute ()
     member this.DefaultValue = defaultValue
     

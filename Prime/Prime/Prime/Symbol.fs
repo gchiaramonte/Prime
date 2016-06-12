@@ -8,6 +8,10 @@ open Microsoft.FSharp.Reflection
 open FParsec
 open Prime
 
+type [<AttributeUsage (AttributeTargets.Class); AllowNullLiteral>] SyntaxAttribute (keywords : string) =
+    inherit Attribute ()
+    member this.Keywords = keywords
+
 type Origin =
     { Start : Position
       Stop : Position }
