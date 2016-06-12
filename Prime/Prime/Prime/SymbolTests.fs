@@ -66,6 +66,14 @@ module SymbolTests =
         let value = scvalue<int list> "[0 1]"
         Assert.Equal<int list> ([0; 1], value)
 
+    let [<Fact>] canConvertStringToIntListList () =
+        let value = scvalue<int list list> "[[]]"
+        Assert.Equal<int list list> ([[]], value)
+
+    let [<Fact>] canConvertStringToIntListListEmpty () =
+        let value = scvalue<int list list> "[]"
+        Assert.Equal<int list list> ([], value)
+
     let [<Fact>] canConvertStringToTuple () =
         let value = scvalue<int * int> "[0 1]"
         Assert.Equal ((0, 1), value)
