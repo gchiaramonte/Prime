@@ -57,7 +57,6 @@ module String =
                     let chr = 
                         match y with
                         | '0' -> '\u0000'
-                        | '\"' -> '\"'
                         | '\\' -> '\\'
                         | 'a' -> '\a'
                         | 'b' -> '\b'
@@ -80,7 +79,6 @@ module String =
         str
             .Replace("\\", "\\\\") // NOTE: this line must come first
             .Replace("\u0000", "\\0")
-            .Replace("\"", "\\\"")
             .Replace("\a", "\\a")
             .Replace("\b", "\\b")
             .Replace("\f", "\\f")
