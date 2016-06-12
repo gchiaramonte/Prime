@@ -65,19 +65,17 @@ module Symbol =
 
     let expand (unexpanded : string) =
         if unexpanded.IndexOfAny OpsUnexpanded = 0 then
-            let partsExpanded = Seq.map (fun (part : char) -> match Array.IndexOf (OpsExpanded, part) with -1 -> string part | i -> OpsExpanded.[i]) unexpanded
-            let expanded = String.Concat partsExpanded
+            let partsExpanded = Seq.map (fun (part : char) -> match Array.IndexOf (OpsUnexpanded, part) with -1 -> string part | i -> OpsExpanded.[i]) unexpanded
+            let expanded = String.Join (string OpsSeparator.[0], partsExpanded)
             expanded
         else unexpanded
 
     let unexpand (expanded : string) =
-        if expanded.IndexOf OpsSeparator.[0] >= 0 then // OPTIMIZATION: to ease GC pressure, only split string when a separator is found
-            let parts = expanded.Split OpsSeparator
-            if Array.IndexOf (OpsExpanded, parts.[0]) = 0 then
-                let partsUnexpanded = Array.map (fun (part : string) -> match part.IndexOfAny OpsUnexpanded with -1 -> part | i -> string OpsUnexpanded.[i]) parts
-                let unexpanded = String.Concat partsUnexpanded
-                unexpanded
-            else expanded
+        let parts = expanded.Split OpsSeparator
+        if Array.contains parts.[0] OpsExpanded then
+            let partsUnexpanded = Array.map (fun (part : string) -> match Array.IndexOf (OpsExpanded, part) with -1 -> part | i -> string OpsUnexpanded.[i]) parts
+            let unexpanded = String.Concat partsUnexpanded
+            unexpanded
         else expanded
 
     let isExplicit (str : string) =
