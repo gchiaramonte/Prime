@@ -46,8 +46,8 @@ module SymbolIndex =
             | Success (value, _, _) -> Some value
             | Failure (error, _, _) -> failwith error
 
-    /// Pretty-print a string in the form an symbolic-expression.
-    let prettyPrint (str : string) =
+    /// Cascade a symbol string into multiple lines with proper tabbing.
+    let private cascade (str : string) =
         let builder = Text.StringBuilder str
         let mutable builderIndex = 0
         let rec advance hasContentParent tabDepth childIndex symbolIndex =
@@ -64,3 +64,11 @@ module SymbolIndex =
         | Some indexLocation -> advance false 0 0 indexLocation
         | None -> ()
         string builder
+
+    /// Pretty-print a symbol string in the form an symbolic-expression.
+    let prettyPrint (str : string) =
+        let strCascaded = cascade str
+        let lines = strCascaded.Split ([|"\r\n"|], StringSplitOptions.None)
+        let linesTrimmed = Array.map (fun (str : string) -> str.TrimEnd ()) lines
+        let strPretty = String.Join ("\r\n", linesTrimmed)
+        strPretty

@@ -46,7 +46,7 @@ type SymbolicConverter (pointType : Type) =
         
     let padWithDefaults (fieldTypes : PropertyInfo array) (values : obj list) =
         let valuesLength = List.length values
-        if fieldTypes.Length = valuesLength then Array.ofList values
+        if valuesLength >= fieldTypes.Length then Array.ofList values
         else
             let values = List.pad (fieldTypes.Length - valuesLength) null values
             (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify |> Array.ofSeq
@@ -58,7 +58,7 @@ type SymbolicConverter (pointType : Type) =
 
     let padWithDefaults' (fieldTypes : Type array) (values : obj list) =
         let valuesLength = List.length values
-        if fieldTypes.Length = valuesLength then Array.ofList values
+        if valuesLength >= fieldTypes.Length then Array.ofList values
         else
             let values = List.pad (fieldTypes.Length - valuesLength) null values
             (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify' |> Array.ofSeq
