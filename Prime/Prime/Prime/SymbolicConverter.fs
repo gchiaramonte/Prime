@@ -18,50 +18,27 @@ type SymbolicCompression<'a, 'b> =
 type SymbolicConverter (pointType : Type) =
     inherit TypeConverter ()
 
-    // NOTE: had to do some reflection hacking get this assembly as it was the only way I could
-    // access ListModule.OfSeq dynamically.
-    static let FSharpCoreAssembly =
-        Array.find
-            (fun (assembly : Assembly) -> assembly.FullName.StartsWith ("FSharp.Core,", StringComparison.Ordinal))
-            (AppDomain.CurrentDomain.GetAssemblies ())
+    let padWithDefaults (fieldTypes : PropertyInfo array) (values : obj array) =
+        if values.Length < fieldTypes.Length then
+            let valuesPadded =
+                fieldTypes |>
+                Seq.skip values.Length |>
+                Seq.map (fun info -> info.PropertyType.GetDefaultValue ()) |>
+                Array.ofSeq |>
+                Array.append values
+            valuesPadded
+        else values
 
-    let objToObjList (source : obj) =
-        let iEnumerable = source :?> IEnumerable
-        List.ofSeq ^ enumerable<obj> iEnumerable
-
-    let objToKeyValuePair (source : obj) =
-        let kvpType = source.GetType ()
-        let key = (kvpType.GetProperty "Key").GetValue (source, null)
-        let value = (kvpType.GetProperty "Value").GetValue (source, null)
-        KeyValuePair (key, value)
-
-    let objToComparableSet (source : obj) =
-        let iEnumerable = source :?> IEnumerable
-        Set.ofSeq ^ enumerable<IComparable> iEnumerable
-
-    let defaultify (fieldType : obj) (optValue : obj) =
-        match optValue with
-        | null -> optValue
-        | _ -> let fieldType = fieldType :?> PropertyInfo in fieldType.PropertyType.GetDefaultValue ()
-        
-    let padWithDefaults (fieldTypes : PropertyInfo array) (values : obj list) =
-        let valuesLength = List.length values
-        if valuesLength >= fieldTypes.Length then Array.ofList values
-        else
-            let values = List.pad (fieldTypes.Length - valuesLength) null values
-            (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify |> Array.ofSeq
-
-    let defaultify' (fieldType : obj) (optValue : obj) =
-        match optValue with
-        | null -> optValue
-        | _ -> let fieldType = fieldType :?> Type in fieldType.GetDefaultValue ()
-
-    let padWithDefaults' (fieldTypes : Type array) (values : obj list) =
-        let valuesLength = List.length values
-        if valuesLength >= fieldTypes.Length then Array.ofList values
-        else
-            let values = List.pad (fieldTypes.Length - valuesLength) null values
-            (fieldTypes |> Seq.map objectify |> List.ofSeq, values) ||> Seq.map2 defaultify' |> Array.ofSeq
+    let padWithDefaults' (fieldTypes : Type array) (values : obj array) =
+        if values.Length < fieldTypes.Length then
+            let valuesPadded =
+                fieldTypes |>
+                Seq.skip values.Length |>
+                Seq.map (fun info -> info.GetDefaultValue ()) |>
+                Array.ofSeq |>
+                Array.append values
+            valuesPadded
+        else values
 
     let rec toSymbol (sourceType : Type) (source : obj) =
         match sourceType.TryGetCustomTypeConverter () with
@@ -84,7 +61,8 @@ type SymbolicConverter (pointType : Type) =
             // symbolize string
             elif sourceType = typeof<string> then
                 let sourceStr = string source
-                if Symbol.shouldBeExplicit sourceStr then String (sourceStr, None)
+                if Symbol.isNumber sourceStr then Number (sourceStr, None)
+                elif Symbol.shouldBeExplicit sourceStr then String (sourceStr, None)
                 else Atom (sourceStr, None)
 
             // symbolize Symbol (no transformation)
@@ -94,7 +72,7 @@ type SymbolicConverter (pointType : Type) =
             // symbolize KeyValuePair
             elif sourceType.Name = typedefof<KeyValuePair<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
-                let kvp = objToKeyValuePair source
+                let kvp = Reflection.objToKeyValuePair source
                 let keySymbol = toSymbol gargs.[0] kvp.Key
                 let valueSymbol = toSymbol gargs.[1] kvp.Value
                 Symbols ([keySymbol; valueSymbol], None)
@@ -102,21 +80,21 @@ type SymbolicConverter (pointType : Type) =
             // symbolize array
             elif sourceType.Name = typedefof<_ array>.Name then
                 let gargs = sourceType.GetGenericArguments ()
-                let items = objToObjList source
+                let items = Reflection.objToObjList source
                 let symbols = List.map (toSymbol gargs.[0]) items
                 Symbols (symbols, None)
 
             // symbolize list
             elif sourceType.Name = typedefof<_ list>.Name then
                 let gargs = sourceType.GetGenericArguments ()
-                let items = objToObjList source
+                let items = Reflection.objToObjList source
                 let symbols = List.map (toSymbol gargs.[0]) items
                 Symbols (symbols, None)
 
             // symbolize Set
             elif sourceType.Name = typedefof<_ Set>.Name then
                 let gargs = sourceType.GetGenericArguments ()
-                let items = objToComparableSet source |> List.ofSeq
+                let items = Reflection.objToComparableSet source |> List.ofSeq
                 let symbols = List.map (toSymbol gargs.[0]) items
                 Symbols (symbols, None)
 
@@ -124,7 +102,7 @@ type SymbolicConverter (pointType : Type) =
             elif sourceType.Name = typedefof<Map<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let itemType = typedefof<KeyValuePair<_, _>>.MakeGenericType [|gargs.[0]; gargs.[1]|]
-                let items = objToObjList source
+                let items = Reflection.objToObjList source
                 let symbols = List.map (toSymbol itemType) items
                 Symbols (symbols, None)
 
@@ -132,7 +110,7 @@ type SymbolicConverter (pointType : Type) =
             elif sourceType.Name = typedefof<Vmap<_, _>>.Name then
                 let gargs = sourceType.GetGenericArguments ()
                 let itemType = typedefof<Tuple<_, _>>.MakeGenericType [|gargs.[0]; gargs.[1]|]
-                let items = objToObjList source
+                let items = Reflection.objToObjList source
                 let symbols = List.map (toSymbol itemType) items
                 Symbols (symbols, None)
 
@@ -223,9 +201,7 @@ type SymbolicConverter (pointType : Type) =
                         let gargs = destType.GetGenericArguments ()
                         let elementType = gargs.[0]
                         let elements = List.map (fromSymbol elementType) symbols
-                        let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.ArrayModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
+                        Reflection.objsToArray destType elements
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
                         failconv "Expected Symbols for conversion to array." ^ Some symbol
 
@@ -236,9 +212,7 @@ type SymbolicConverter (pointType : Type) =
                         let gargs = destType.GetGenericArguments ()
                         let elementType = gargs.[0]
                         let elements = List.map (fromSymbol elementType) symbols
-                        let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.ListModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
+                        Reflection.objsToList destType elements
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
                         failconv "Expected Symbols for conversion to list." ^ Some symbol
 
@@ -249,9 +223,7 @@ type SymbolicConverter (pointType : Type) =
                         let gargs = destType.GetGenericArguments ()
                         let elementType = gargs.[0]
                         let elements = List.map (fromSymbol elementType) symbols
-                        let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.SetModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|elementType|]
-                        ofSeq.Invoke (null, [|cast.Invoke (null, [|elements|])|])
+                        Reflection.objsToSet destType elements
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
                         failconv "Expected Symbols for conversion to Set." ^ Some symbol
 
@@ -264,9 +236,7 @@ type SymbolicConverter (pointType : Type) =
                         | [|fstType; sndType|] ->
                             let pairType = typedefof<Tuple<_, _>>.MakeGenericType [|fstType; sndType|]
                             let pairList = List.map (fromSymbol pairType) symbols
-                            let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|pairType|]
-                            let ofSeq = ((FSharpCoreAssembly.GetType "Microsoft.FSharp.Collections.MapModule").GetMethod ("OfSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|fstType; sndType|]
-                            ofSeq.Invoke (null, [|cast.Invoke (null, [|pairList|])|])
+                            Reflection.pairsToMap destType pairList
                         | _ -> failwithumf ()
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
                         failconv "Expected Symbols for conversion to Map." ^ Some symbol
@@ -280,9 +250,7 @@ type SymbolicConverter (pointType : Type) =
                         | [|fstType; sndType|] ->
                             let pairType = typedefof<Tuple<_, _>>.MakeGenericType [|fstType; sndType|]
                             let pairList = List.map (fromSymbol pairType) symbols
-                            let cast = (typeof<System.Linq.Enumerable>.GetMethod ("Cast", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|pairType|]
-                            let ofSeq = ((typedefof<Vmap<_, _>>.Assembly.GetType "Prime.VmapModule+Vmap").GetMethod ("ofSeq", BindingFlags.Static ||| BindingFlags.Public)).MakeGenericMethod [|fstType; sndType|]
-                            ofSeq.Invoke (null, [|cast.Invoke (null, [|pairList|])|])
+                            Reflection.pairsToVmap destType pairList
                         | _ -> failwithumf ()
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
                         failconv "Expected Symbols for conversion to Vmap." ^ Some symbol
@@ -315,7 +283,7 @@ type SymbolicConverter (pointType : Type) =
                     match symbol with
                     | Symbols (symbols, _) ->
                         let elementTypes = FSharpType.GetTupleElements destType
-                        let elements = List.mapi (fun i elementSymbol -> fromSymbol elementTypes.[i] elementSymbol) symbols
+                        let elements = symbols |> Array.ofList |> Array.mapi (fun i elementSymbol -> fromSymbol elementTypes.[i] elementSymbol)
                         let elements = padWithDefaults' elementTypes elements
                         FSharpValue.MakeTuple (elements, destType)
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
@@ -326,7 +294,7 @@ type SymbolicConverter (pointType : Type) =
                     match symbol with
                     | Symbols (symbols, _) ->
                         let fieldTypes = FSharpType.GetRecordFields destType
-                        let fields = List.mapi (fun i fieldSymbol -> fromSymbol fieldTypes.[i].PropertyType fieldSymbol) symbols
+                        let fields = symbols |> Array.ofList |> Array.mapi (fun i fieldSymbol -> fromSymbol fieldTypes.[i].PropertyType fieldSymbol)
                         let fields = padWithDefaults fieldTypes fields
                         FSharpValue.MakeRecord (destType, fields)
                     | Atom (_, _) | Number (_, _) | String (_, _) | Quote (_, _) ->
@@ -349,7 +317,7 @@ type SymbolicConverter (pointType : Type) =
                             match Array.tryFind (fun (unionCase : UnionCaseInfo) -> unionCase.Name = unionName) unionCases with
                             | Some unionCase ->
                                 let unionFieldTypes = unionCase.GetFields ()
-                                let unionValues = List.mapi (fun i unionSymbol -> fromSymbol unionFieldTypes.[i].PropertyType unionSymbol) symbolTail
+                                let unionValues = symbolTail |> Array.ofList |> Array.mapi (fun i unionSymbol -> fromSymbol unionFieldTypes.[i].PropertyType unionSymbol)
                                 let unionValues = padWithDefaults unionFieldTypes unionValues
                                 FSharpValue.MakeUnion (unionCase, unionValues)
                             | None ->

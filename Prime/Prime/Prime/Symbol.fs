@@ -8,9 +8,10 @@ open Microsoft.FSharp.Reflection
 open FParsec
 open Prime
 
-type [<AttributeUsage (AttributeTargets.Class); AllowNullLiteral>] SyntaxAttribute (keywords : string) =
+type [<AttributeUsage (AttributeTargets.Class); AllowNullLiteral>] SyntaxAttribute (keywords0 : string, keywords1 : string) =
     inherit Attribute ()
-    member this.Keywords = keywords
+    member this.Keywords0 = keywords0
+    member this.Keywords1 = keywords1
 
 type Origin =
     { Start : Position
@@ -35,7 +36,8 @@ type Symbol =
 module Symbol =
 
     let [<Literal>] NewlineChars = "\n\r"
-    let [<Literal>] WhitespaceChars = " \t" + NewlineChars
+    let [<Literal>] WhitespaceChars = "\t " + NewlineChars
+    let (*Literal*) WhitespaceCharsArray = Array.ofSeq WhitespaceChars
     let [<Literal>] SeparatorChar = ' '
     let [<Literal>] SeparatorStr = " "
     let [<Literal>] OpenSymbolsChar = '['
@@ -62,7 +64,27 @@ module Symbol =
         NumberLiteralOptions.AllowExponent |||
         NumberLiteralOptions.AllowFraction |||
         NumberLiteralOptions.AllowHexadecimal
+    
+    let isExplicit (str : string) = str.StartsWith OpenStringStr && str.EndsWith CloseStringStr
+    let isWhitespaceChar chr = isAnyOf WhitespaceChars chr
+    let isStructureChar chr = isAnyOf StructureChars chr
+    
+    let skipWhitespace = skipAnyOf WhitespaceChars
+    let skipWhitespaces = skipMany skipWhitespace
+    let followedByWhitespaceOrStructureCharOrAtEof = nextCharSatisfies (fun chr -> isWhitespaceChar chr || isStructureChar chr) <|> eof
+    
+    let openSymbols = skipChar OpenSymbolsChar
+    let closeSymbols = skipChar CloseSymbolsChar
+    let openString = skipChar OpenStringChar
+    let closeString = skipChar CloseStringChar
+    let openQuote = skipChar OpenQuoteChar
+    let closeQuote = skipChar CloseQuoteChar
+    
+    let isNumberParser = numberLiteral NumberFormat "number" >>. eof
+    let isNumber str = match run isNumberParser str with Success (_, _, position) -> position.Index = int64 str.Length | Failure _ -> false
+    let shouldBeExplicit str = Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
 
+    /// Expand the operator chars in a string.
     let expand (unexpanded : string) =
         if unexpanded.IndexOfAny OpsUnexpanded = 0 then
             let partsExpanded = Seq.map (fun (part : char) -> match Array.IndexOf (OpsUnexpanded, part) with -1 -> string part | i -> OpsExpanded.[i]) unexpanded
@@ -70,6 +92,7 @@ module Symbol =
             expanded
         else unexpanded
 
+    /// Unexpand the operator words in a string.
     let unexpand (expanded : string) =
         let parts = expanded.Split OpsSeparator
         if Array.contains parts.[0] OpsExpanded then
@@ -77,22 +100,6 @@ module Symbol =
             let unexpanded = String.Concat partsUnexpanded
             unexpanded
         else expanded
-
-    let isExplicit (str : string) =
-        str.StartsWith OpenStringStr && str.EndsWith CloseStringStr
-    
-    let shouldBeExplicit (str : string) =
-        Seq.exists (fun chr -> Char.IsWhiteSpace chr || Seq.contains chr StructureCharsNoStr) str
-
-    let skipWhitespace = skipAnyOf WhitespaceChars
-    let skipWhitespaces = skipMany skipWhitespace
-
-    let openSymbols = skipChar OpenSymbolsChar
-    let closeSymbols = skipChar CloseSymbolsChar
-    let openString = skipChar OpenStringChar
-    let closeString = skipChar CloseStringChar
-    let openQuote = skipChar OpenQuoteChar
-    let closeQuote = skipChar CloseQuoteChar
 
     let readAtomChars = many1 (noneOf (StructureChars + WhitespaceChars))
     let readStringChars = many (noneOf [CloseStringChar])
@@ -120,6 +127,7 @@ module Symbol =
         parse {
             let! start = getPosition
             let! number = numberLiteral NumberFormat "number"
+            do! followedByWhitespaceOrStructureCharOrAtEof
             let! stop = getPosition
             do! skipWhitespaces
             let origin = Some { Start = start; Stop = stop }
@@ -173,13 +181,14 @@ module Symbol =
     let rec writeSymbol symbol =
         match symbol with
         | Atom (str, _) ->
+            let str = String.clean str
             if Seq.isEmpty str then OpenStringStr + CloseStringStr
             elif not (isExplicit str) && shouldBeExplicit str then OpenStringStr + str + CloseStringStr
             elif isExplicit str && not (shouldBeExplicit str) then str.Substring (1, str.Length - 2)
             else unexpand str
-        | Number (str, _) -> str
-        | String (str, _) -> OpenStringStr + str + CloseStringStr
-        | Quote (str, _) -> OpenQuoteStr + str + CloseQuoteStr
+        | Number (str, _) -> String.clean str
+        | String (str, _) -> OpenStringStr + String.clean str + CloseStringStr
+        | Quote (str, _) -> OpenQuoteStr + String.clean str + CloseQuoteStr
         | Symbols (symbols, _) -> OpenSymbolsStr + String.Join (" ", List.map writeSymbol symbols) + CloseSymbolsStr
 
     /// Convert a string to a symbol, with the following parses:
@@ -247,6 +256,47 @@ module Symbol =
         | String (_, optOrigin)
         | Quote (_, optOrigin)
         | Symbols (_, optOrigin) -> optOrigin
+
+    /// Cascade a symbol string into multiple lines with proper tabbing.
+    let private cascade keywords str =
+    
+        let rec getCascadeDepth symbol depth =
+            match symbol with
+            | Atom (str, _) -> if List.contains str keywords then depth elif List.isEmpty keywords then depth else 0
+            | Symbols (_ :: _ as symbols', _) -> getCascadeDepth (List.head symbols') (depth + 1)
+            | _ -> 0
+
+        let symbol = fromString str
+        let symbolStr = toString symbol
+        let builder = Text.StringBuilder symbolStr
+        let mutable builderIndex = 0
+        let rec advance tabDepth cascadeDepth symbol =
+            match tryGetOrigin symbol with
+            | Some origin ->
+                let cascadeDepth' = getCascadeDepth symbol 0
+                if origin.Start.Index <> 0L && cascadeDepth < 1 && cascadeDepth' > 0 then
+                    let whitespace = "\r\n" + String.replicate tabDepth " "
+                    ignore ^ builder.Insert (int origin.Start.Index + builderIndex, whitespace)
+                    builderIndex <- builderIndex + whitespace.Length
+                match symbol with
+                | Symbols (symbols, _) ->
+                    let tabDepth' = tabDepth + 1
+                    let cascadeDepth'' = if cascadeDepth' > 0 then cascadeDepth' - 1 else cascadeDepth - 1
+                    List.iteri (fun i symbol -> advance tabDepth' (if i = 0 then cascadeDepth'' else 0) symbol) symbols
+                | _ -> ()
+            | None -> failwithumf ()
+
+        advance 0 -1 symbol
+        string builder
+
+    /// Pretty-print a symbol string in the form an symbolic-expression.
+    let prettyPrint (keywords : string) symbol =
+        let keywordsSplit = keywords.Split ([|' '|], StringSplitOptions.RemoveEmptyEntries) |> List.ofArray
+        let strCascaded = cascade keywordsSplit symbol
+        let lines = strCascaded.Split ([|"\r\n"|], StringSplitOptions.None)
+        let linesTrimmed = Array.map (fun (str : string) -> str.TrimEnd ()) lines
+        let strPretty = String.Join ("\r\n", linesTrimmed)
+        strPretty
 
 type ConversionException (message : string, optSymbol : Symbol option) =
     inherit Exception (message)

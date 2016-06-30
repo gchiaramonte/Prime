@@ -32,6 +32,12 @@ module SymbolTests =
         | Number (str, _) -> Assert.Equal<string> ("0", str)
         | _ -> Assert.True false
     
+    let [<Fact>] canConvertStringToNegativeNumber () =
+        let converter = SymbolicConverter typeof<Symbol>
+        match converter.ConvertFromString "-1" :?> Symbol with
+        | Number (str, _) -> Assert.Equal<string> ("-1", str)
+        | _ -> Assert.True false
+    
     let [<Fact>] canConvertStringToString () =
         let converter = SymbolicConverter typeof<Symbol>
         match converter.ConvertFromString "\"str\"" :?> Symbol with
@@ -103,3 +109,8 @@ module SymbolTests =
     let [<Fact>] canConvertStringToMapIntInt () =
         let value = scvalue<Map<int, int>> "[[0 1]]"
         ignore value // TODO: assert for values
+
+    let [<Fact>] canPrettyPrintGuid () =
+        let symbolStr = "[5ec8734f-6a3d-4472-b86a-78125d238dc2]"
+        let symbolPretty = Symbol.prettyPrint "" symbolStr
+        Assert.Equal<string> (symbolStr, symbolPretty)

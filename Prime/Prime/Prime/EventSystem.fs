@@ -47,23 +47,6 @@ type [<ReferenceEquality>] Event<'a, 's when 's :> Participant> =
 type Subscription<'a, 's, 'w when 's :> Participant> =
     Event<'a, 's> -> 'w -> Handling * 'w
 
-// this is just me playing with an idea for a parallelizable pure functional event system - ignore
-module private Parallel =
-
-    type Op<'w, 'a> = obj -> 'w -> 'a
-    
-    type Ops<'w, 'a> = Op<'w, 'a> list
-
-    let run<'w, 'a> (combine : 'a -> 'a -> 'a) (ops : Ops<'w, 'a>) (o : obj) (w : 'w) =
-        let results = System.Collections.Generic.List<'a> ()
-        System.Threading.Tasks.Parallel.ForEach (ops, fun op -> results.Add (op o w)) |> ignore
-        let results = List.ofSeq results
-        List.reduce combine results
-
-    // NOTE: it might be better to model this with denotational semantics rather than informally as here
-    type Subscription<'s, 'w, 'a when 's :> Participant> =
-        Event<obj, 's> -> 'w -> Handling * 'a
-
 /// An entry in the subscription map.
 type SubscriptionEntry =
     Guid * Participant * obj
@@ -106,7 +89,8 @@ module EventSystemModule =
               EventStates : Vmap<Guid, obj>
               EventTracer : string -> unit
               EventTracing : bool
-              EventFilter : EventFilter }
+              EventFilter : EventFilter
+              EventAddresses : obj Address list }
 
     [<RequireQualifiedAccess>]
     module EventSystem =
@@ -164,6 +148,18 @@ module EventSystemModule =
                 if EventFilter.filter addressStr traceRev eventSystem.EventFilter then
                     eventSystem.EventTracer ^ addressStr + "|" + scstring traceRev
 
+        /// Push an event address to the list for cycle-detection.
+        let pushEventAddress<'w> eventAddress (eventSystem : 'w EventSystem) =
+            { eventSystem with EventAddresses = eventAddress :: eventSystem.EventAddresses }
+            
+        /// Pop an event address to the list for cycle-detection.
+        let popEventAddress<'w> (eventSystem : 'w EventSystem) =
+            { eventSystem with EventAddresses = List.tail eventSystem.EventAddresses }
+            
+        /// Get the current event address list for cycle-detection.
+        let getEventAddresses<'w> (eventSystem : 'w EventSystem) =
+            eventSystem.EventAddresses
+
         /// Make an event system.
         let make eventTracer eventTracing eventFilter =
             { Subscriptions = Vmap.makeEmpty ()
@@ -171,4 +167,5 @@ module EventSystemModule =
               EventStates = Vmap.makeEmpty ()
               EventTracer = eventTracer
               EventTracing = eventTracing
-              EventFilter = eventFilter }
+              EventFilter = eventFilter
+              EventAddresses = [] }

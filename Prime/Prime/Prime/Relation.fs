@@ -43,18 +43,25 @@ type RelationConverter (targetType : Type) =
             ftoaFunction.Invoke (null, [|fullName|])
         | :? Symbol as relationSymbol ->
             match relationSymbol with
-            | Atom (relationStr, _) | Number (relationStr, _) | String (relationStr, _) -> 
+            | Atom (relationStr, _) | String (relationStr, _) -> 
                 let fullName = !!relationStr
                 let ftoaFunction = targetType.GetMethod ("makeFromFullName", BindingFlags.Static ||| BindingFlags.Public)
                 ftoaFunction.Invoke (null, [|fullName|])
-            | Quote (_, _) | Symbols (_, _) ->
-                failconv "Expected Symbol, Number, or String for conversion to Relation." ^ Some relationSymbol
+            | Number (_, _) | Quote (_, _) | Symbols (_, _) ->
+                failconv "Expected Symbol or String for conversion to Relation." ^ Some relationSymbol
         | _ ->
             if targetType.IsInstanceOfType source then source
             else failconv "Invalid RelationConverter conversion from source." None
 
 [<AutoOpen>]
 module RelationModule =
+
+    /// The interface of a relation.
+    type IAddress =
+        interface
+            /// The names of an address.
+            abstract OptNames : Name option list
+            end
 
     /// A relation that can be resolved to an address via projection.
     type [<CustomEquality; NoComparison; TypeConverter (typeof<RelationConverter>)>] 'a Relation =
@@ -84,6 +91,9 @@ module RelationModule =
         /// Equate Relations.
         static member equals relation relation2 =
             relation.OptNames = relation2.OptNames
+
+        interface IAddress with
+            member this.OptNames = this.OptNames
     
         interface 'a Relation IEquatable with
             member this.Equals that =

@@ -24,11 +24,13 @@ module String =
         List.iter (fun (chr : char) -> ignore (sb.Append chr)) chars
         string sb
 
+    /// Ensure a string is clean of any quotes.
+    let clean (str : string) =
+        str.Replace ("\"", "")
+
     /// Textualize a string for usage as text.
     let textualize (str : string) =
-        if str.StartsWith "\"" && str.EndsWith "\""
-        then str.Substring (1, str.Length - 2)
-        else str
+        (clean str).Replace ('_', '\"')
 
     /// Get the string with the given ending.
     let withEnd str target =
