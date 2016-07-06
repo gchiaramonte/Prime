@@ -73,8 +73,33 @@ let foldWhile folder (state : 's) (seq : 't seq) =
     | Some state -> state
     | None -> lastState
 
+/// Implement a fold until folder results in Some.
+let foldUntil folder (state : 's) (seq : 't seq) =
+    let mutable isFirst = true // no do while necessitates this flag
+    let mutable lastState = state
+    let mutable optState = Some lastState
+    use mutable enr = seq.GetEnumerator ()
+    while (isFirst || optState.IsNone) && enr.MoveNext () do
+        isFirst <- false
+        lastState <- optState.Value
+        optState <- folder lastState enr.Current
+    match optState with
+    | Some state -> state
+    | None -> lastState
+
 /// Check that a predicate passes for NO items in a sequence.
 let rec notExists pred seq =
     match tryHead seq with
     | Some head -> not ^ pred head && notExists pred (Seq.skip 1 seq)
     | None -> true
+
+/// Split a sequence on a predicate.
+let split pred seq =
+    let rec splitInner pred left right seq =
+        match tryHead seq with
+        | Some head ->
+            if pred head
+            then splitInner pred (head :: left) right (Seq.tail seq)
+            else splitInner pred left (head :: right) (Seq.tail seq)
+        | None -> (left, right)
+    splitInner pred [] [] seq
